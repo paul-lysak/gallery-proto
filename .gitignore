@@ -1,2 +1,7 @@
 *.class
 *.log
+.idea
+*.iml
+config.sh
+node_modules
+client_app/dist

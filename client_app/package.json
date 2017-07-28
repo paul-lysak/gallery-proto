@@ -1,0 +1,16 @@
+{
+  "private": true,
+  "name": "gallery-proto",
+  "version": "1.0.0",
+  "description": "",
+  "devDependencies": {
+    "json-loader": "^0.5.7",
+    "webpack": "^3.4.1"
+  },
+  "dependencies": {
+    "amazon-cognito-identity-js": "^1.19.0"
+  },
+  "scripts": {
+    "build": "webpack; cp -r static/* dist"
+  }
+}
