@@ -1,6 +1,8 @@
 enablePlugins(ScalaJSPlugin, WorkbenchPlugin)
 
-name := "Example"
+name := "gallery-proto"
+
+organization := "org.aimplicits"
 
 version := "0.1-SNAPSHOT"
 
