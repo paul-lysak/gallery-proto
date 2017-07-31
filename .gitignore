@@ -5,3 +5,4 @@
 config.sh
 node_modules
 client_app/dist
+local_notes.md
