@@ -1,4 +1,5 @@
-enablePlugins(ScalaJSPlugin, WorkbenchPlugin)
+enablePlugins(ScalaJSPlugin, WorkbenchPlugin, ScalaJSBundlerPlugin)
+//enablePlugins(ScalaJSPlugin, WorkbenchPlugin)
 
 name := "gallery-proto"
 
@@ -14,10 +15,14 @@ libraryDependencies ++= Seq(
 //  "org.webjars.npm" % "amazon-cognito-identity-js" % "1.19.0"
 )
 
-jsDependencies ++= Seq(
+//jsDependencies ++= Seq(
 //  "org.webjars.npm" % "aws-sdk" % "2.10.0" / "dist/aws-sdk.js",
-  "org.webjars.npm" % "amazon-cognito-identity-js" % "1.19.0" / "dist/aws-cognito-sdk.js" commonJSName "AWSCognitoSDK", // dependsOn "dist/aws-sdk.js",
-  "org.webjars.npm" % "amazon-cognito-identity-js" % "1.19.0" / "dist/amazon-cognito-identity.js" dependsOn "dist/aws-cognito-sdk.js"
+//  "org.webjars.npm" % "amazon-cognito-identity-js" % "1.19.0" / "dist/aws-cognito-sdk.js" commonJSName "AWSCognitoSDK", // dependsOn "dist/aws-sdk.js",
+//  "org.webjars.npm" % "amazon-cognito-identity-js" % "1.19.0" / "dist/amazon-cognito-identity.js" dependsOn "dist/aws-cognito-sdk.js"
+//)
+
+npmDependencies in Compile ++= Seq(
+  "amazon-cognito-identity-js" -> "1.19.0"
 )
 
 //Customize generated JavaScript location
