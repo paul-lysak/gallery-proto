@@ -22,5 +22,10 @@ module.exports = {
                 loader: 'file'
             }
         ]
+    },
+    resolve: {
+        alias: {
+            'vue$': 'vue/dist/vue.esm.js'
+        }
     }
 };

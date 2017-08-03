@@ -6,6 +6,7 @@
  } from "amazon-cognito-identity-js";
 import appConfig from "./config";
 
+import Vue from "vue";
 
 console.log("hi, there!", appConfig)
 
@@ -14,6 +15,17 @@ console.log("hi, there!", appConfig)
 //   IdentityPoolId: appConfig.IdentityPoolId
 // });
 
+
+var app = new Vue({
+  data: {
+    message: 'Hello Vue!'
+  },
+    template: `
+    <div id="app">
+      {{ message }}
+    </div>
+    `
+}).$mount("#app")
 
 var userPool = new CognitoUserPool({
   UserPoolId: appConfig.UserPoolId,
@@ -28,6 +40,7 @@ var userPool = new CognitoUserPool({
         })
     ]
 
+/*
     userPool.signUp('sampleUser@site.com', 'samplePassword', attributeList, null, function(err, result){
         if (err) {
             console.error("Failed to register user", err, result)
@@ -38,3 +51,4 @@ var userPool = new CognitoUserPool({
             console.log('user name is ' + cognitoUser.getUsername());
         }
     });
+    */
