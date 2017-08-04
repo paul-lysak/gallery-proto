@@ -23,13 +23,16 @@ module.exports = {
     // resolve: {
     //   extensions: ['.js']
     // },
-    entry: './src/main.js',
+    entry: './src/gallery-app.js',
     devtool: 'inline-source-map',
     plugins: [
         new CleanWebpackPlugin(['dist']),
         new HtmlWebpackPlugin({
-           title: 'Gallery Prototype'
-         })
+           title: 'Gallery Prototype',
+           inject: false,
+           template: require("html-webpack-template"),
+           appMountId: "app"
+         }),
    ],
     // Place output files in `./dist/my-app.js`
     output: {
