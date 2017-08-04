@@ -13,6 +13,9 @@
 //   console.log('-------------------------');
 // }
 
+const HtmlWebpackPlugin = require('html-webpack-plugin');
+const CleanWebpackPlugin = require('clean-webpack-plugin');
+
 module.exports = {
     // Example setup for your project:
     // The entry module that requires or imports the rest of your project.
@@ -21,6 +24,13 @@ module.exports = {
     //   extensions: ['.js']
     // },
     entry: './src/main.js',
+    devtool: 'inline-source-map',
+    plugins: [
+        new CleanWebpackPlugin(['dist']),
+        new HtmlWebpackPlugin({
+           title: 'Gallery Prototype'
+         })
+   ],
     // Place output files in `./dist/my-app.js`
     output: {
         path: __dirname + '/dist',
@@ -33,8 +43,20 @@ module.exports = {
                 loader: 'json-loader'
             },
             {
+                test: /\.css$/,
+                use: [ 'style-loader', 'css-loader' ]
+            },
+            {
                 test: /\.html$/,
                 loader: 'file'
+            },
+            {
+                test: /\.(woff|woff2|eot|ttf|otf)$/,
+                use: ['file-loader']
+            },
+            {
+                test: /\.(png|svg|jpg|gif)$/,
+                use: ['file-loader']
             }
         ]
     },
@@ -44,7 +66,7 @@ module.exports = {
         }
     },
     devServer: {
-      open: true, // to open the local server in browser
+      open: false,
       openPage: "",
       contentBase: __dirname + '/static'
     },

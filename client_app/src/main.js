@@ -5,8 +5,11 @@
   CognitoUserAttribute
  } from "amazon-cognito-identity-js";
 import appConfig from "./config";
-
 import Vue from "vue";
+
+import "./style.css"
+
+import "bootstrap/dist/css/bootstrap.css"
 
 console.log("hi, there!", appConfig)
 
@@ -15,6 +18,15 @@ console.log("hi, there!", appConfig)
 //   IdentityPoolId: appConfig.IdentityPoolId
 // });
 
+//TODO nicer way to append components programmatically
+document.body.innerHTML =
+    ` Hi there, dynamic gallery!
+
+    <div class="st1">styled div</div>
+
+<div id="app">
+</div>
+    `
 
 var app = new Vue({
   data: {

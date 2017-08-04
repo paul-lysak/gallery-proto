@@ -4,6 +4,8 @@
 <body>
     Hi there, gallery!
 
+    <div class="st1">styled div</div>
+
 <div id="app">
 </div>
 
