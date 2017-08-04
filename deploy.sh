@@ -13,3 +13,4 @@ npm run build
 echo Deploying to $APP_LOCATION_S3 ...
 aws $AWS_PROFILE s3 sync dist $APP_LOCATION_S3 --acl public-read
 echo Deploy complete
+

@@ -5,14 +5,14 @@
   "description": "",
   "devDependencies": {
     "json-loader": "^0.5.7",
-    "webpack": "^3.4.1",
-    "http-server": "0.10.0"
+    "webpack": "^3.4.1"
   },
   "dependencies": {
     "amazon-cognito-identity-js": "^1.19.0",
     "vue": "2.4.2"
   },
   "scripts": {
+    "dev-server": "webpack-dev-server",
     "build": "webpack; cp -r static/* dist"
   }
 }
