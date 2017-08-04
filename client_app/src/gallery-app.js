@@ -20,34 +20,51 @@ console.log("hi, there!", appConfig)
 
 var app = new Vue({
   data: {
-    message: 'Hello Vue!'
+    message: 'Hello Vue!',
+      user: {
+        id: null,
+        nick: null
+      }
   },
+    methods: {
+      signIn: function(event) {
+          console.log("sign in")
+          this.$data.user = {id: "12345", nick: "azazaz"}
+      },
+      signOut: function(event) {
+          console.log("sign out")
+          this.$data.user = {}
+      }
+    },
     template: `
-    <div class="container g-center-container">
+    <div class="container">
+    
+      <nav class="navbar navbar-default">
+        <div class="container-fluid">
+          <div class="navbar-header">
+            <a class="navbar-brand" href="#">Gallery</a>
+          </div>
+          <div id="navbar" class="navbar-collapse collapse">
+            <ul class="nav navbar-nav navbar-right">
+              <p v-if="user.id && user.nick" class="navbar-text">{{user.nick}}</p>
+              <li><a v-if="!user.id" v-on:click="signIn" href="#">Sign in</a></li>
+              <li><a v-if="user.id" v-on:click="signOut" href="#">Sign out</a></li>
+            </ul>
+          </div>
+        </div>
+      </nav>
 
-      <div class="panel panel-default">
-          <div class="panel-heading">
-            <h3 class="panel-title">Sign In - Gallery</h3>
-          </div>
-          <div class="panel-body">
-            <form>
-              <div class="form-group">
-                <input type="text" class="form-control" placeholder="Username">
-                <input type="password" class="form-control" placeholder="Password">
-             </div>
-             <button type="submit" class="btn btn-default">Sign In</button>
-          </div>
+      <div class="jumbotron">
+        <h1>No public content</h1>
+        <p>Sign in to view the gallery content</p>
       </div>
-     
-      <div class="panel">
-          <div class="panel-body">
-          {{ message }}
-          </div>
-      </div> 
+    
 
     </div>
     `
 }).$mount("#app")
+
+app.$data.user = {id: "2314", nick: "alala"}
 
 var userPool = new CognitoUserPool({
   UserPoolId: appConfig.UserPoolId,
