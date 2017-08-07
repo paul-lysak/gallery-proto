@@ -7,6 +7,10 @@
 import appConfig from "./config";
 import Vue from "vue";
 
+import Toaster from 'v-toaster'
+import 'v-toaster/dist/v-toaster.css'
+Vue.use(Toaster, {timeout: 5000})
+
 import "./style.css"
 
 import "bootstrap/dist/css/bootstrap.css"
@@ -34,9 +38,9 @@ Vue.component("sign-in-controls", {
             event.preventDefault();//avoid form submission warnings
             //TODO actual logic of password validation
             if(this.$data.password == "123") {
-                this.$emit("signedIn", {id: "id:"+this.$data.login, nick: "nick:"+this.$data.login})
+                this.$emit("signedIn", {id: "id:"+this.$data.login, nick: "nick:"+this.$data.login});
             } else {
-                console.error("Incorrect login or password")
+                this.$toaster.error('Incorrect login or password');
             }
         }
     },

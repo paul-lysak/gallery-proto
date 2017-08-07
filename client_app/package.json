@@ -16,6 +16,7 @@
   "dependencies": {
     "amazon-cognito-identity-js": "^1.19.0",
     "bootstrap": "^3.3.7",
+    "v-toaster": "^1.0.2",
     "vue": "2.4.2"
   },
   "scripts": {
