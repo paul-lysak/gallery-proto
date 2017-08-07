@@ -1,8 +1,9 @@
-// import {Config, CognitoIdentityCredentials} from "aws-sdk";
+import {Config, CognitoIdentityCredentials} from "aws-sdk";
  import {
-//   CognitoUser,
+  CognitoUser,
   CognitoUserPool,
-  CognitoUserAttribute
+ AuthenticationDetails,
+  // CognitoUserAttribute
  } from "amazon-cognito-identity-js";
 import appConfig from "./config";
 import Vue from "vue";
@@ -22,13 +23,63 @@ console.log("hi, there!", appConfig)
 //   IdentityPoolId: appConfig.IdentityPoolId
 // });
 
-Vue.component("sign-in-dialog", {
-    props: [],
-    template: `
-    <div>TODO: sign in</div>
-    `
 
-})
+
+// Vue.component("sign-in-dialog", {
+//     props: [],
+//     template: `
+//     <div>TODO: sign in</div>
+//     `
+// })
+
+function authenticate(login, password) {
+    var authenticationData = {
+        Username : login,
+        Password : password,
+    };
+    var authenticationDetails = new AuthenticationDetails(authenticationData);
+
+    var userPool = new CognitoUserPool({
+      UserPoolId: appConfig.UserPoolId,
+      ClientId: appConfig.ClientId,
+    });
+
+    var userData = {
+        Username : login,
+        Pool : userPool
+    };
+    var cognitoUser = new CognitoUser(userData);
+    cognitoUser.authenticateUser(authenticationDetails, {
+        onSuccess: function (result) {
+            Vue.prototype.$toaster.info('Logged in successfully');
+            val jwtToken = result.getAccessToken().getJwtToken();
+            console.log('successful login', result, jwtToken);
+
+            //POTENTIAL: Region needs to be set if not already set previously elsewhere.
+            AWS.config.region = appConfig.region;
+
+            /*
+            AWS.config.credentials = new AWS.CognitoIdentityCredentials({
+                IdentityPoolId : appConfig.IdentityPoolId,
+                Logins : {
+                    // Change the key below according to the specific region your user pool is in.
+                    'cognito-idp.<region>.amazonaws.com/<YOUR_USER_POOL_ID>' : result.getIdToken().getJwtToken()
+                }
+            });
+            */
+
+            // Instantiate aws sdk service objects now that the credentials have been updated.
+            // example: var s3 = new AWS.S3();
+
+        },
+
+        onFailure: function(err) {
+            console.log('sign in failed', err);
+            Vue.prototype.$toaster.error('Sign in failed: '+err);
+        },
+
+    });
+}
 
 Vue.component("sign-in-controls", {
     props: [],
@@ -36,12 +87,15 @@ Vue.component("sign-in-controls", {
         signIn: function(event) {
             console.log("ctrls sign in", this.$data.login, this.$data.password)
             event.preventDefault();//avoid form submission warnings
+            authenticate(this.$data.login, this.$data.password)
+            /*
             //TODO actual logic of password validation
             if(this.$data.password == "123") {
                 this.$emit("signedIn", {id: "id:"+this.$data.login, nick: "nick:"+this.$data.login});
             } else {
                 this.$toaster.error('Incorrect login or password');
             }
+            */
         }
     },
     data: function() {
@@ -120,18 +174,18 @@ var app = new Vue({
 
 // app.$data.user = {id: "2314", nick: "alala"}
 
-var userPool = new CognitoUserPool({
-  UserPoolId: appConfig.UserPoolId,
-  ClientId: appConfig.ClientId,
-});
+// var userPool = new CognitoUserPool({
+//   UserPoolId: appConfig.UserPoolId,
+//   ClientId: appConfig.ClientId,
+// });
 
 //successfully created a user with this:
-    var attributeList = [
-            new CognitoUserAttribute({
-            Name : 'nickname',
-            Value : 'sampleUser'
-        })
-    ]
+//     var attributeList = [
+//             new CognitoUserAttribute({
+//             Name : 'nickname',
+//             Value : 'sampleUser'
+//         })
+//     ]
 
 /*
     userPool.signUp('sampleUser@site.com', 'samplePassword', attributeList, null, function(err, result){
