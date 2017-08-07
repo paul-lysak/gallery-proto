@@ -32,6 +32,12 @@ console.log("hi, there!", appConfig)
 //     `
 // })
 
+    var userPool = new CognitoUserPool({
+      UserPoolId: appConfig.UserPoolId,
+      ClientId: appConfig.ClientId,
+    });
+
+
 function authenticate(login, password) {
     var authenticationData = {
         Username : login,
@@ -39,10 +45,6 @@ function authenticate(login, password) {
     };
     var authenticationDetails = new AuthenticationDetails(authenticationData);
 
-    var userPool = new CognitoUserPool({
-      UserPoolId: appConfig.UserPoolId,
-      ClientId: appConfig.ClientId,
-    });
 
     var userData = {
         Username : login,
@@ -52,7 +54,7 @@ function authenticate(login, password) {
     cognitoUser.authenticateUser(authenticationDetails, {
         onSuccess: function (result) {
             Vue.prototype.$toaster.info('Logged in successfully');
-            val jwtToken = result.getAccessToken().getJwtToken();
+            var jwtToken = result.getAccessToken().getJwtToken();
             console.log('successful login', result, jwtToken);
 
             //POTENTIAL: Region needs to be set if not already set previously elsewhere.
@@ -108,7 +110,7 @@ Vue.component("sign-in-controls", {
       <form class="navbar-form navbar-right">
         <div class="form-group">
           <input type="text" class="form-control" placeholder="Login" v-model:value="login"/>
-          <input type="text" class="form-control" placeholder="Password" v-model:value="password"/>
+          <input type="password" class="form-control" placeholder="Password" v-model:value="password"/>
         </div>
         <button type="submit" class="btn btn-default" v-on:click="signIn">Sign In</button>
       </form>
@@ -120,26 +122,21 @@ var app = new Vue({
   data: {
     message: 'Hello Vue!',
       user: {
+        anonymous: false,
         id: null,
         nick: null
       }
-      // ,
-      // dialogs: {signIn: false}
   },
-    methods: {
-      // signIn: function(event) {
-      //     console.log("sign in")
-      //     this.$data.dialogs.signIn = true
-      //     this.$data.user = {id: "12345", nick: "azazaz"}
-      // },
-
+  methods: {
     signedIn: function(event) {
         console.log("Signed in", event)
             this.$data.user = event;
+            this.$data.user.anonymous = false;
         },
       signOut: function(event) {
-          console.log("sign out")
-          this.$data.user = {}
+          console.log("sign out");
+          user.signOut();
+          this.$data.user = {anonymous: true};
       }
     },
     template: `
@@ -150,7 +147,7 @@ var app = new Vue({
           <div class="navbar-header">
             <a class="navbar-brand" href="#">Gallery</a>
           </div>
-          <sign-in-controls v-if="!user.id" v-on:signedIn="signedIn"></sign-in-controls>
+          <sign-in-controls v-if="user.anonymous" v-on:signedIn="signedIn"></sign-in-controls>
           <div id="navbar" class="navbar-collapse collapse">
             <ul class="nav navbar-nav navbar-right">
               <p v-if="user.id && user.nick" class="navbar-text">{{user.nick}}</p>
@@ -172,7 +169,63 @@ var app = new Vue({
     `
 }).$mount("#app")
 
-// app.$data.user = {id: "2314", nick: "alala"}
+//TODO move to separate module
+function resolveCurrentUser() {
+    var pAnonymous = new Promise(function (resolve, reject) {resolve({
+        anonymous: true,
+        id: null,
+        nickname: null
+    })})
+
+
+    var user = userPool.getCurrentUser();
+
+    if (user == null) {
+        pAnonymous
+    } else {
+        var pSession = new Promise(function (resolve, reject) {
+            user.getSession(function (err, res) {
+                if (err) reject(err);
+                else resolve(res);
+            })
+        });
+
+
+        var pAttrs = pSession.then(function (res) {
+            return new Promise(function (resolve, reject) {
+                user.getUserAttributes(function (err, res) {
+                    if (err) reject(err);
+                    else resolve(res);
+                })
+            });
+        })
+
+        var pAttrs = pAttrs.then(function (res) {
+            return new Promise(function (resolve, reject) {
+                var nickAttr = res.find(el => {return el.Name == "nickname";})
+                console.log("attrs for user", user, res)
+                if (nickAttr) resolve({
+                    anonymouse: false,
+                    id: user.username,
+                    nickname: nickAttr.Value
+                })
+                else reject("User has no nickname attribute")
+            })
+        })
+
+        return pAttrs.then(undefined,
+            function (err) {
+                console.warn("Couldn't get user attributes, clearing current user", err);
+                user.signOut();
+                return pAnonymous;
+            })
+
+    }
+}
+
+resolveCurrentUser().then(function(user) {
+    app.$data.user = user;
+})
 
 // var userPool = new CognitoUserPool({
 //   UserPoolId: appConfig.UserPoolId,
