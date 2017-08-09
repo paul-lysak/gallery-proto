@@ -42,29 +42,37 @@ Vue.component("sign-in-controls", {
 })
 
 
-function awsDemo() {
-    console.log("querying s3...")
+function stripDir(f, parent) {
+    const f1 = f.indexOf(parent) == 0 ? f.slice(parent.length) : f;
+    if(f1.slice(-1) == "/") return f1.slice(0, -1);
+    else return f1;
+}
 
-    const bucket = appConfig.galleryBucket
-    // const bucket = "plysak-sample-bucket"
 
+function listGallery(dir) {
     var s3 = new AWS.S3();
-    //     s3.listObjects({
-    //     Bucket: bucket,
-    //     Prefix: "selected_album/"
-    // }, function (err, data) {
-    //     if (err) console.error("s3_1 err", err)
-    //     else console.log("s3_1 data", data)
-    // })
-
-    s3.listObjects({
-        Bucket: bucket,
-        Prefix: "selected_album/",
-        Delimiter: "/"
-    }, function (err, data) {
-        if (err) console.error("s3_2 err", err)
-        else console.log("s3_2 data", data)
+    const d = appConfig.galleryFolder + dir + "/"
+    return new Promise(function (resolve, reject) {
+        s3.listObjects({
+            Bucket: appConfig.galleryBucket,
+            Prefix: d,
+            Delimiter: "/"
+        }, function (err, res) {
+            if (err) reject(err)
+            else {
+                // console.log("result", res)
+                if(res.IsTruncated) console.warn("s3 response truncated, application doesn't handle it yet")
+                resolve({
+                    folders: res.CommonPrefixes.map(p => stripDir(p.Prefix, d)).filter(f => f.length > 0),
+                    files: res.Contents.map(f => stripDir(f.Key, d)).filter(f => f.length > 0)
+                })
+            }
+        })
     })
+}
+
+function awsDemo() {
+    listGallery("").then(res => console.log("dir listing", res))
 }
 
 var app = new Vue({
