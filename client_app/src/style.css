@@ -24,3 +24,8 @@
 .g-login-box {
     max-width: 800px;
 }
+
+.tree-item {
+    list-style-type: none;
+
+}

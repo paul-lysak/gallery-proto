@@ -75,6 +75,85 @@ function awsDemo() {
     listGallery("").then(res => console.log("dir listing", res))
 }
 
+function pathLastElement(path) {
+    const i = path.lastIndexOf("/")
+    if(i < 0)
+        return path;
+    else
+        return path.slice(0, i);
+}
+
+Vue.component("gallery-tree-item", {
+    props: ["model", "defaultExpand"],
+    data: function() {
+        console.log("create item data", this.defaultExpand, this.model)
+        return {expand: !!this.defaultExpand};
+    },
+    computed: {
+        caption: function () {
+            return !this.model.folder || this.model.folder.length == 0 ? "Gallery" : pathLastElement(this.model.folder);
+        }
+    },
+    template: `
+    <div>
+      <div>
+        <span v-if="!expand" class="icon expand-icon glyphicon glyphicon-minus"></span> 
+        <span v-if="expand" class="icon expand-icon glyphicon glyphicon-plus"></span>
+      {{caption}}</div>
+      <ul>
+        <li v-for="sf in model.subfolders" class="tree-item">
+            <gallery-tree-item :model="sf"></gallery-tree-item>
+        </li>
+      </ul>
+    </div>
+    `
+})
+
+Vue.component("gallery-tree", {
+    // methods: {
+    //
+    // },
+    data: function() {
+        return {
+            folderData: {
+                folder: "",
+                subfolders: [
+                    {folder: "first", subfolders: []},
+                    {folder: "second", subfolders: []},
+                    {folder: "third", subfolders: []}
+                ]
+            }
+        }
+    },
+    // computed: {
+    //     caption: function() {
+    //         return !this.folder || this.folder.length == 0 ? "Gallery" : pathLastElement(this.folder);
+    //     }
+    // },
+    template: `
+    <div>
+      <gallery-tree-item :model="folderData" :defaultExpand="true"></gallery-tree-item>
+    </div>
+    `
+})
+
+Vue.component('gallery-content', {
+  template:
+      `<div class="container">
+        <gallery-tree></gallery-tree>
+      </div>`
+})
+
+
+Vue.component('splash', {
+  template: `<div class="jumbotron">
+        <h1>No public content</h1>
+        <p>Sign in to view the gallery content</p>
+      </div>`
+})
+
+
+
 var app = new Vue({
   data: {
     message: 'Hello Vue!',
@@ -82,7 +161,8 @@ var app = new Vue({
         anonymous: false,
         id: null,
         nick: null
-      }
+      },
+      bodyComponent: "splash"
   },
   methods: {
       userResolved: function (user) {
@@ -90,6 +170,7 @@ var app = new Vue({
           if(!!this.$data.user.id) this.authenticated()
       },
       authenticated: function() {
+          this.$data.bodyComponent = "gallery-content"
           awsDemo()
       },
       signOut: function (event) {
@@ -98,6 +179,9 @@ var app = new Vue({
           this.$data.user = UserService.anonymousUser;
       }
   },
+    // coponents: {
+    //
+    // }
   template: `
     <div class="container">
     
@@ -116,10 +200,8 @@ var app = new Vue({
         </div>
       </nav>
 
-      <div class="jumbotron">
-        <h1>No public content</h1>
-        <p>Sign in to view the gallery content</p>
-      </div>
+
+    <component v-bind:is="bodyComponent"></component>
 
     </div>
     `
