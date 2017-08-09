@@ -9,6 +9,8 @@ import "./style.css"
 
 import "bootstrap/dist/css/bootstrap.css"
 
+import appConfig from "./config";
+
 Vue.component("sign-in-controls", {
     props: [],
     methods: {
@@ -41,13 +43,27 @@ Vue.component("sign-in-controls", {
 
 
 function awsDemo() {
+    console.log("querying s3...")
+
+    const bucket = appConfig.galleryBucket
+    // const bucket = "plysak-sample-bucket"
+
     var s3 = new AWS.S3();
+    //     s3.listObjects({
+    //     Bucket: bucket,
+    //     Prefix: "selected_album/"
+    // }, function (err, data) {
+    //     if (err) console.error("s3_1 err", err)
+    //     else console.log("s3_1 data", data)
+    // })
+
     s3.listObjects({
-        Bucket: "plysak-sample-bucket",
-        Prefix: "normal"
+        Bucket: bucket,
+        Prefix: "selected_album/",
+        Delimiter: "/"
     }, function (err, data) {
-        if (err) console.error("s3 err", err)
-        else console.log("s3 data", data)
+        if (err) console.error("s3_2 err", err)
+        else console.log("s3_2 data", data)
     })
 }
 
@@ -63,6 +79,9 @@ var app = new Vue({
   methods: {
       userResolved: function (user) {
           this.$data.user = user;
+          if(!!this.$data.user.id) this.authenticated()
+      },
+      authenticated: function() {
           awsDemo()
       },
       signOut: function (event) {
