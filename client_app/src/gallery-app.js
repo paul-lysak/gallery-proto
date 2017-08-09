@@ -40,6 +40,17 @@ Vue.component("sign-in-controls", {
 })
 
 
+function awsDemo() {
+    var s3 = new AWS.S3();
+    s3.listObjects({
+        Bucket: "plysak-sample-bucket",
+        Prefix: "normal"
+    }, function (err, data) {
+        if (err) console.error("s3 err", err)
+        else console.log("s3 data", data)
+    })
+}
+
 var app = new Vue({
   data: {
     message: 'Hello Vue!',
@@ -50,8 +61,9 @@ var app = new Vue({
       }
   },
   methods: {
-      signedIn: function (user) {
+      userResolved: function (user) {
           this.$data.user = user;
+          awsDemo()
       },
       signOut: function (event) {
           console.log("sign out");
@@ -67,7 +79,7 @@ var app = new Vue({
           <div class="navbar-header">
             <a class="navbar-brand" href="#">Gallery</a>
           </div>
-          <sign-in-controls v-if="user.anonymous" v-on:signedIn="signedIn"></sign-in-controls>
+          <sign-in-controls v-if="user.anonymous" v-on:signedIn="userResolved"></sign-in-controls>
           <div id="navbar" class="navbar-collapse collapse">
             <ul class="nav navbar-nav navbar-right">
               <p v-if="user.id && user.nick" class="navbar-text">{{user.nick}}</p>
@@ -89,6 +101,6 @@ var app = new Vue({
 
 
 UserService.resolveCurrentUser().then(function(user) {
-    app.$data.user = user;
+    app.userResolved(user)
 })
 
