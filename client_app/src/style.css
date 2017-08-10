@@ -30,5 +30,10 @@
 }
 
 .tree-item-caption {
-    cursor: default;
+    /*cursor: default;*/
+    cursor: pointer;
+}
+
+.tree-item-caption:hover {
+    text-decoration: underline;
 }

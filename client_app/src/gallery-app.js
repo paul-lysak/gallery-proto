@@ -43,32 +43,15 @@ Vue.component("sign-in-controls", {
 })
 
 
-// function loadDir(dir) {
-//     const foldersData = {
-//         "": ["first", "second", "third"],
-//         "first": ["firstA", "firstB"],
-//         "second": ["secondA", "secondB", "secondC"]
-//     }
-//
-//     console.log("loading dir", dir)
-//     if(!foldersData[dir])
-//         return [];
-//     else
-//         return foldersData[dir];
-// }
-
-// function awsDemo() {
-//     listGallery("").then(res => console.log("dir listing", res))
-// }
-
 function pathLastElement(path) {
-    const i = path.lastIndexOf("/")
-    const lastEl = i < 0 ? path : path.slice(i + 1);
-    console.log("path last el", path, lastEl)
-    return lastEl;
+    const elements = path.split("/").filter(el => el.length > 0)
+    if(elements.length == 0)
+        return path;
+    else
+        return elements.pop()
 }
 
-Vue.component("gallery-tree-item", {
+Vue.component("gallery-tree", {
     props: ["folder", "defaultExpand"],
     data: function() {
         return {
@@ -78,7 +61,6 @@ Vue.component("gallery-tree-item", {
     },
     computed: {
         caption: function () {
-            // const c =!this.folder || this.folder.length == 0 ? "Gallery" : pathLastElement(this.folder);
             return this.folder == "/" ? "Gallery" : pathLastElement(this.folder);
         }
     },
@@ -87,7 +69,6 @@ Vue.component("gallery-tree-item", {
             const that = this;
             const prefix = this.folder == "/" ? "/" : this.folder + "/";
             if(this.expanded && this.subfolders === undefined)
-                // this.subfolders = loadDir(this.folder)
                 GalleryService.list(this.folder).then(function(res) {
                     that.subfolders = res.folders.map(f => prefix + f);
                 })
@@ -95,6 +76,12 @@ Vue.component("gallery-tree-item", {
         toggle: function () {
             this.expanded = !this.expanded;
             this.fetchConditionally();
+        },
+        select: function() {
+            this.$emit("folderSelected", this.folder)
+        },
+        forwardSelect: function (folder) {
+            this.$emit("folderSelected", folder)
         }
     },
     created: function () {
@@ -102,51 +89,46 @@ Vue.component("gallery-tree-item", {
     },
     template: `
     <div>
-      <div  class="tree-item-caption">
+      <div >
         <span @click="toggle" v-if="expanded" class="icon expand-icon glyphicon glyphicon-minus"></span> 
         <span @click="toggle" v-if="!expanded" class="icon expand-icon glyphicon glyphicon-plus"></span>
-      {{caption}}</div>
+        <span @click="select" class="tree-item-caption">{{caption}}</span>
+      </div>
       <ul v-show="expanded">
         <li v-for="sf in subfolders" class="tree-item">
-            <gallery-tree-item :folder="sf"></gallery-tree-item>
+            <gallery-tree :folder="sf" v-on:folderSelected="forwardSelect"></gallery-tree>
         </li>
       </ul>
     </div>
     `
 })
 
-Vue.component("gallery-tree", {
-    // methods: {
-    //
-    // },
+Vue.component("gallery-folder", {
+    props: ["folder"],
     data: function() {
-        return {
-            folderData: {
-                folder: "",
-                subfolders: [
-                    {folder: "first", subfolders: []},
-                    {folder: "second", subfolders: []},
-                    {folder: "third", subfolders: []}
-                ]
-            }
-        }
+        return {files: []}
     },
-    // computed: {
-    //     caption: function() {
-    //         return !this.folder || this.folder.length == 0 ? "Gallery" : pathLastElement(this.folder);
-    //     }
-    // },
     template: `
-    <div>
-      <gallery-tree-item :folder="'/'" :defaultExpand="true"></gallery-tree-item>
-    </div>
+    <div>TODO: content of {{folder}}</div>
     `
 })
 
-Vue.component('gallery-content', {
+Vue.component("gallery-content", {
+    data: function() {
+        return {
+            selectedFolder: "/"
+        }
+    },
+  methods: {
+      folderSelected: function(folder) {
+          console.log("folder selected", folder)
+          this.selectedFolder = folder;
+      }
+  },
   template:
       `<div class="container">
-        <gallery-tree></gallery-tree>
+        <gallery-tree :folder="'/'" :defaultExpand="true" v-on:folderSelected="folderSelected"></gallery-tree>
+        <gallery-folder :folder="selectedFolder"></gallery-folder>
       </div>`
 })
 

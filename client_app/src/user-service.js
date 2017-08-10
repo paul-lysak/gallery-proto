@@ -47,8 +47,6 @@ function userInfo(user) {
 
             setUpAWS(user)
 
-
-
             if (nickAttr) resolve({
                 anonymouse: false,
                 id: user.username,
