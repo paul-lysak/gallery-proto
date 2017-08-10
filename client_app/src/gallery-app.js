@@ -152,8 +152,8 @@ Vue.component("gallery-folder", {
         <h4>{{folder}}</h4>
         <div v-if="isLoading()">Loading...</div>
         <div v-if="isEmpty()">No files</div>
-        <div v-if="nonEmpty()">
-            <div v-for="f in files" @click="downloadFile(f)">{{f}}</div>
+        <div v-if="nonEmpty()" class="gallery-thumbnail-container">
+            <div v-for="f in files" @click="downloadFile(f)" class="gallery-thumbnail">{{f}}</div>
         </div>
     </div>
     `
