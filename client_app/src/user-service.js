@@ -78,21 +78,6 @@ const UserService = {
                 onSuccess: function (session) {
                     var jwtToken = session.getAccessToken().getJwtToken();
                     resolve(session)
-
-                    // AWS.config.region = appConfig.region;
-                    //
-                    // AWS.config.credentials = new AWS.CognitoIdentityCredentials({
-                    //     IdentityPoolId : appConfig.IdentityPoolId//,
-                    //     // Logins : {
-                    //         // Change the key below according to the specific region your user pool is in.
-                    //         // 'cognito-idp.<region>.amazonaws.com/<YOUR_USER_POOL_ID>' : result.getIdToken().getJwtToken()
-                    //     // }
-                    // });
-                    //
-                    // // Instantiate aws sdk service objects now that the credentials have been updated.
-                    // // example: var s3 = new AWS.S3();
-                    // var s3 = new AWS.S3();
-
                 },
                 onFailure: function (err) {
                     reject(err)
@@ -131,7 +116,6 @@ const UserService = {
 
     signOut: function() {
         userPool.getCurrentUser().signOut();
-
     }
 };
 

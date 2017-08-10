@@ -131,6 +131,11 @@ Vue.component("gallery-folder", {
             GalleryService.list(this.folder).then(function(folderContent) {
                 that.files = folderContent.files;
             })
+        },
+        downloadFile: function(file) {
+            const url = GalleryService.preSign(this.folder, file)
+            const win = window.open(url, '_blank');
+            win.focus();
         }
     },
     watch: {
@@ -148,7 +153,7 @@ Vue.component("gallery-folder", {
         <div v-if="isLoading()">Loading...</div>
         <div v-if="isEmpty()">No files</div>
         <div v-if="nonEmpty()">
-            <div v-for="f in files">{{f}}</div>
+            <div v-for="f in files" @click="downloadFile(f)">{{f}}</div>
         </div>
     </div>
     `

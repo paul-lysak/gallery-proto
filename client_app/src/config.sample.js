@@ -2,5 +2,10 @@ export default {
     region: '',
     IdentityPoolId: '',
     UserPoolId: '',
-    ClientId: ''
+    ClientId: '',
+
+    galleryBucket: "sample_bucket",
+    galleryFolder: "path/to/album",
+
+    linkExpirationTimeout: 300 /*seconds*/
 }

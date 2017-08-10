@@ -29,10 +29,11 @@ function appendSlash(dir) {
     else return dir + "/";
 }
 
+
 const GalleryService = {
     list: function (dir) {
+        const s3 = new AWS.S3();
         console.info("list directory", dir)
-        var s3 = new AWS.S3();
         const d = appConfig.galleryFolder + appendSlash(dir)
         return new Promise(function (resolve, reject) {
             s3.listObjects({
@@ -51,6 +52,14 @@ const GalleryService = {
                 }
             })
         })
+    },
+
+    preSign: function(dir, file) {
+        const s3 = new AWS.S3();
+        const key = appConfig.galleryFolder + appendSlash(dir) + file;
+        const url = s3.getSignedUrl("getObject", {Bucket: appConfig.galleryBucket, Key: key, Expires: appConfig.linkExpirationTimeout});
+        console.log("presigned url", dir, file, url);
+        return url;
     }
 }
 
