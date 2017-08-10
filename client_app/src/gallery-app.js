@@ -1,4 +1,5 @@
 import UserService from "./user-service";
+import GalleryService from "./gallery-service";
 import Vue from "vue";
 
 import Toaster from 'v-toaster'
@@ -42,59 +43,29 @@ Vue.component("sign-in-controls", {
 })
 
 
-function stripDir(f, parent) {
-    const f1 = f.indexOf(parent) == 0 ? f.slice(parent.length) : f;
-    if(f1.slice(-1) == "/") return f1.slice(0, -1);
-    else return f1;
-}
+// function loadDir(dir) {
+//     const foldersData = {
+//         "": ["first", "second", "third"],
+//         "first": ["firstA", "firstB"],
+//         "second": ["secondA", "secondB", "secondC"]
+//     }
+//
+//     console.log("loading dir", dir)
+//     if(!foldersData[dir])
+//         return [];
+//     else
+//         return foldersData[dir];
+// }
 
-
-function listGallery(dir) {
-    var s3 = new AWS.S3();
-    const d = appConfig.galleryFolder + dir + "/"
-    return new Promise(function (resolve, reject) {
-        s3.listObjects({
-            Bucket: appConfig.galleryBucket,
-            Prefix: d,
-            Delimiter: "/"
-        }, function (err, res) {
-            if (err) reject(err)
-            else {
-                // console.log("result", res)
-                if(res.IsTruncated) console.warn("s3 response truncated, application doesn't handle it yet")
-                resolve({
-                    folders: res.CommonPrefixes.map(p => stripDir(p.Prefix, d)).filter(f => f.length > 0),
-                    files: res.Contents.map(f => stripDir(f.Key, d)).filter(f => f.length > 0)
-                })
-            }
-        })
-    })
-}
-
-function loadDir(dir) {
-    const foldersData = {
-        "": ["first", "second", "third"],
-        "first": ["firstA", "firstB"],
-        "second": ["secondA", "secondB", "secondC"]
-    }
-
-    console.log("loading dir", dir)
-    if(!foldersData[dir])
-        return [];
-    else
-        return foldersData[dir];
-}
-
-function awsDemo() {
-    listGallery("").then(res => console.log("dir listing", res))
-}
+// function awsDemo() {
+//     listGallery("").then(res => console.log("dir listing", res))
+// }
 
 function pathLastElement(path) {
     const i = path.lastIndexOf("/")
-    if(i < 0)
-        return path;
-    else
-        return path.slice(0, i);
+    const lastEl = i < 0 ? path : path.slice(i + 1);
+    console.log("path last el", path, lastEl)
+    return lastEl;
 }
 
 Vue.component("gallery-tree-item", {
@@ -107,13 +78,19 @@ Vue.component("gallery-tree-item", {
     },
     computed: {
         caption: function () {
-            return !this.folder || this.folder.length == 0 ? "Gallery" : pathLastElement(this.folder);
+            // const c =!this.folder || this.folder.length == 0 ? "Gallery" : pathLastElement(this.folder);
+            return this.folder == "/" ? "Gallery" : pathLastElement(this.folder);
         }
     },
     methods: {
         fetchConditionally: function() {
+            const that = this;
+            const prefix = this.folder == "/" ? "/" : this.folder + "/";
             if(this.expanded && this.subfolders === undefined)
-                this.subfolders = loadDir(this.folder)
+                // this.subfolders = loadDir(this.folder)
+                GalleryService.list(this.folder).then(function(res) {
+                    that.subfolders = res.folders.map(f => prefix + f);
+                })
         },
         toggle: function () {
             this.expanded = !this.expanded;
@@ -125,9 +102,9 @@ Vue.component("gallery-tree-item", {
     },
     template: `
     <div>
-      <div @click="toggle" class="tree-item-caption">
-        <span v-if="expanded" class="icon expand-icon glyphicon glyphicon-minus"></span> 
-        <span v-if="!expanded" class="icon expand-icon glyphicon glyphicon-plus"></span>
+      <div  class="tree-item-caption">
+        <span @click="toggle" v-if="expanded" class="icon expand-icon glyphicon glyphicon-minus"></span> 
+        <span @click="toggle" v-if="!expanded" class="icon expand-icon glyphicon glyphicon-plus"></span>
       {{caption}}</div>
       <ul v-show="expanded">
         <li v-for="sf in subfolders" class="tree-item">
@@ -161,7 +138,7 @@ Vue.component("gallery-tree", {
     // },
     template: `
     <div>
-      <gallery-tree-item :folder="''" :defaultExpand="true"></gallery-tree-item>
+      <gallery-tree-item :folder="'/'" :defaultExpand="true"></gallery-tree-item>
     </div>
     `
 })
@@ -200,7 +177,7 @@ var app = new Vue({
       },
       authenticated: function() {
           this.$data.bodyComponent = "gallery-content"
-          awsDemo()
+          // awsDemo()
       },
       signOut: function (event) {
           console.log("sign out");
