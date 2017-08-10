@@ -6,11 +6,17 @@ import Toaster from 'v-toaster'
 import 'v-toaster/dist/v-toaster.css'
 Vue.use(Toaster, {timeout: 5000})
 
-import "./style.css"
 
 import "bootstrap/dist/css/bootstrap.css"
 
 import appConfig from "./config";
+
+import SplitPane from 'vue-split-pane'
+
+
+Vue.component("split-pane", SplitPane)
+
+import "./style.css"
 
 Vue.component("sign-in-controls", {
     props: [],
@@ -129,8 +135,27 @@ Vue.component("gallery-content", {
       `<div class="container">
         <gallery-tree :folder="'/'" :defaultExpand="true" v-on:folderSelected="folderSelected"></gallery-tree>
         <gallery-folder :folder="selectedFolder"></gallery-folder>
+        <div style="height: 200px">
+        <split-pane>
+          <section slot="left">
+              <p>Left Pane</p>
+              <p>Left Pane</p>
+              <p>Left Pane</p>
+              <p>Left Pane</p>
+              <p>Left Pane</p>
+          </section>
+          <section slot="right">
+          <p>Right Pane</p>
+          <p>Right Pane</p>
+          <p>Right Pane</p>
+          <p>Right Pane</p>
+          <p>Right Pane</p>
+          </section>
+        </split-pane>
+        </div>
       </div>`
 })
+
 
 
 Vue.component('splash', {
