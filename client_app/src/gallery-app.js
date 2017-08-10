@@ -71,6 +71,20 @@ function listGallery(dir) {
     })
 }
 
+function loadDir(dir) {
+    const foldersData = {
+        "": ["first", "second", "third"],
+        "first": ["firstA", "firstB"],
+        "second": ["secondA", "secondB", "secondC"]
+    }
+
+    console.log("loading dir", dir)
+    if(!foldersData[dir])
+        return [];
+    else
+        return foldersData[dir];
+}
+
 function awsDemo() {
     listGallery("").then(res => console.log("dir listing", res))
 }
@@ -84,25 +98,40 @@ function pathLastElement(path) {
 }
 
 Vue.component("gallery-tree-item", {
-    props: ["model", "defaultExpand"],
+    props: ["folder", "defaultExpand"],
     data: function() {
-        console.log("create item data", this.defaultExpand, this.model)
-        return {expand: !!this.defaultExpand};
+        return {
+            expanded: !!this.defaultExpand,
+            subfolders: undefined
+        };
     },
     computed: {
         caption: function () {
-            return !this.model.folder || this.model.folder.length == 0 ? "Gallery" : pathLastElement(this.model.folder);
+            return !this.folder || this.folder.length == 0 ? "Gallery" : pathLastElement(this.folder);
         }
+    },
+    methods: {
+        fetchConditionally: function() {
+            if(this.expanded && this.subfolders === undefined)
+                this.subfolders = loadDir(this.folder)
+        },
+        toggle: function () {
+            this.expanded = !this.expanded;
+            this.fetchConditionally();
+        }
+    },
+    created: function () {
+        this.fetchConditionally();
     },
     template: `
     <div>
-      <div>
-        <span v-if="!expand" class="icon expand-icon glyphicon glyphicon-minus"></span> 
-        <span v-if="expand" class="icon expand-icon glyphicon glyphicon-plus"></span>
+      <div @click="toggle" class="tree-item-caption">
+        <span v-if="expanded" class="icon expand-icon glyphicon glyphicon-minus"></span> 
+        <span v-if="!expanded" class="icon expand-icon glyphicon glyphicon-plus"></span>
       {{caption}}</div>
-      <ul>
-        <li v-for="sf in model.subfolders" class="tree-item">
-            <gallery-tree-item :model="sf"></gallery-tree-item>
+      <ul v-show="expanded">
+        <li v-for="sf in subfolders" class="tree-item">
+            <gallery-tree-item :folder="sf"></gallery-tree-item>
         </li>
       </ul>
     </div>
@@ -132,7 +161,7 @@ Vue.component("gallery-tree", {
     // },
     template: `
     <div>
-      <gallery-tree-item :model="folderData" :defaultExpand="true"></gallery-tree-item>
+      <gallery-tree-item :folder="''" :defaultExpand="true"></gallery-tree-item>
     </div>
     `
 })

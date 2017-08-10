@@ -27,5 +27,8 @@
 
 .tree-item {
     list-style-type: none;
+}
 
+.tree-item-caption {
+    cursor: default;
 }
