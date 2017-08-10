@@ -38,10 +38,10 @@
     text-decoration: underline;
 }
 
-/*.split-pane-gutter {*/
-    /*!*background: yellow;*!*/
-    /*!*border: 5px solid green;*!*/
-    /*height: auto !important; !* To override unfortunate style of component*!*/
-    /*top: 0;*/
-    /*bottom: 0;*/
-/*}*/
+.split-pane-gutter {
+    /*background: yellow;*/
+    /*border: 5px solid green;*/
+    height: auto !important; /* To override unfortunate style of component*/
+    top: 0;
+    bottom: 0;
+}

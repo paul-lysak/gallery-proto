@@ -112,10 +112,45 @@ Vue.component("gallery-tree", {
 Vue.component("gallery-folder", {
     props: ["folder"],
     data: function() {
-        return {files: []}
+        return {files: undefined}
+    },
+    methods: {
+        isLoading: function() {
+            return this.files === undefined;
+        },
+        isEmpty: function() {
+            return this.files !== undefined && this.files.length == 0;
+        },
+        nonEmpty: function() {
+            return this.files !== undefined && this.files.length > 0;
+        },
+        refreshFiles: function() {
+            const that = this;
+            this.files = undefined;
+            // setTimeout(function() {that.files = [that.folder+"/TODO1", that.folder+"/TODO2"]}, 1000)
+            GalleryService.list(this.folder).then(function(folderContent) {
+                that.files = folderContent.files;
+            })
+        }
+    },
+    watch: {
+        folder: function(newFolder) {
+            console.log("folder updated", this.folder, newFolder)
+            this.refreshFiles();
+        }
+    },
+    created: function() {
+        this.refreshFiles();
     },
     template: `
-    <div>TODO: content of {{folder}}</div>
+    <div>
+        <h4>{{folder}}</h4>
+        <div v-if="isLoading()">Loading...</div>
+        <div v-if="isEmpty()">No files</div>
+        <div v-if="nonEmpty()">
+            <div v-for="f in files">{{f}}</div>
+        </div>
+    </div>
     `
 })
 
@@ -133,23 +168,12 @@ Vue.component("gallery-content", {
   },
   template:
       `<div class="container">
-        <gallery-tree :folder="'/'" :defaultExpand="true" v-on:folderSelected="folderSelected"></gallery-tree>
-        <gallery-folder :folder="selectedFolder"></gallery-folder>
-        <div style="height: 200px">
         <split-pane>
           <section slot="left">
-              <p>Left Pane</p>
-              <p>Left Pane</p>
-              <p>Left Pane</p>
-              <p>Left Pane</p>
-              <p>Left Pane</p>
+            <gallery-tree :folder="'/'" :defaultExpand="true" v-on:folderSelected="folderSelected"></gallery-tree>
           </section>
           <section slot="right">
-          <p>Right Pane</p>
-          <p>Right Pane</p>
-          <p>Right Pane</p>
-          <p>Right Pane</p>
-          <p>Right Pane</p>
+            <gallery-folder :folder="selectedFolder"></gallery-folder>
           </section>
         </split-pane>
         </div>
