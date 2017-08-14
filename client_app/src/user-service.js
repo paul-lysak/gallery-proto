@@ -21,6 +21,9 @@ const anonymousUser = {
 
 function setUpAWS(user) {
     const logins = {}
+    const accessToken = user.getSignInUserSession().getAccessToken()
+    const jAccessToken = accessToken.getJwtToken()
+    console.log("Got access token", accessToken, jAccessToken)
     const token = user.getSignInUserSession().getIdToken().getJwtToken()
     const loginKey = "cognito-idp." + appConfig.region + ".amazonaws.com/" + appConfig.UserPoolId
     logins[loginKey] = token
@@ -31,6 +34,11 @@ function setUpAWS(user) {
 
     AWS.config.region = appConfig.region;
     AWS.config.credentials = creds
+
+    creds.get(function() {
+        console.log("Got AWS credentials", AWS.config.credentials)
+
+    })
 }
 
 function userInfo(user) {

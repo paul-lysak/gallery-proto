@@ -16,6 +16,14 @@ import SplitPane from 'vue-split-pane'
 
 Vue.component("split-pane", SplitPane)
 
+
+//tmp
+ import {
+  CognitoUser,
+  CognitoUserPool,
+ AuthenticationDetails,
+ } from "amazon-cognito-identity-js";
+
 import "./style.css"
 
 Vue.component("sign-in-controls", {
@@ -195,6 +203,19 @@ Vue.component('splash', {
 })
 
 
+function createTestLink() {
+    const lambdaBase = "http://d3qtwt9vcn2ml2.cloudfront.net/galleryLambda"
+
+    // const userPool = new CognitoUserPool({
+    //   UserPoolId: appConfig.UserPoolId,
+    //   ClientId: appConfig.ClientId,
+    // });
+    // const user = userPool.getCurrentUser();
+    // console.log("current user=", user)
+    // const token = user.getSignInUserSession().getIdToken().getJwtToken()
+    const token = "TODO"
+    return lambdaBase + "?token="+token
+}
 
 var app = new Vue({
   data: {
@@ -204,7 +225,8 @@ var app = new Vue({
         id: null,
         nick: null
       },
-      bodyComponent: "splash"
+      bodyComponent: "splash",
+      testLink: null
   },
   methods: {
       userResolved: function (user) {
@@ -213,6 +235,7 @@ var app = new Vue({
       },
       authenticated: function() {
           this.$data.bodyComponent = "gallery-content"
+          this.$data.testLink = createTestLink()
           // awsDemo()
       },
       signOut: function (event) {
@@ -226,7 +249,6 @@ var app = new Vue({
     // }
   template: `
     <div class="container">
-    
       <nav class="navbar navbar-default">
         <div class="container-fluid">
           <div class="navbar-header">
@@ -234,6 +256,7 @@ var app = new Vue({
           </div>
           <sign-in-controls v-if="user.anonymous" v-on:signedIn="userResolved"></sign-in-controls>
           <div id="navbar" class="navbar-collapse collapse">
+            <a :href="testLink" v-if="testLink">testLink</a>
             <ul class="nav navbar-nav navbar-right">
               <p v-if="user.id && user.nick" class="navbar-text">{{user.nick}}</p>
               <li><a v-if="user.id" v-on:click="signOut" href="#">Sign out</a></li>
