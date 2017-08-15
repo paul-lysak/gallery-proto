@@ -9,20 +9,11 @@ Vue.use(Toaster, {timeout: 5000})
 
 import "bootstrap/dist/css/bootstrap.css"
 
-import appConfig from "./config";
+// import appConfig from "./config";
 
 import SplitPane from 'vue-split-pane'
 
-
 Vue.component("split-pane", SplitPane)
-
-
-//tmp
- import {
-  CognitoUser,
-  CognitoUserPool,
- AuthenticationDetails,
- } from "amazon-cognito-identity-js";
 
 import "./style.css"
 
@@ -202,35 +193,6 @@ Vue.component('splash', {
       </div>`
 })
 
-
-function tc() {
-    const lambdaBase = "http://d3qtwt9vcn2ml2.cloudfront.net/galleryLambda"
-
-    // const userPool = new CognitoUserPool({
-    //   UserPoolId: appConfig.UserPoolId,
-    //   ClientId: appConfig.ClientId,
-    // });
-    // const user = userPool.getCurrentUser();
-    // console.log("current user=", user)
-    // const token = user.getSignInUserSession().getIdToken().getJwtToken()
-    const token = localStorage.getItem("CognitoIdentityServiceProvider.2m43b0gnfhesg3kbaut67g9g9k.4ba5cc50-f799-4271-a83e-ad2fe5c63d3d.idToken")
-    const url = "https://d3qtwt9vcn2ml2.cloudfront.net/gallerylambdaa"
-
-    console.log("requesting cookies with token ", token, url)
-    const req = new XMLHttpRequest()
-    req.open("GET", url, false)
-    req.setRequestHeader("Authorization", token)
-    req.withCredentials = true
-    req.send()
-    console.log("Done requesting cookies")
-
-    // const preq = new XMLHttpRequest()
-    // const purl = "http://d3qtwt9vcn2ml2.cloudfront.net/selected_album/2008_Paul/dsc_1275.jpg"
-    // preq.open("GET", purl, false)
-    // preq.send()
-    // console.log("Done requesting picture")
-}
-
 var app = new Vue({
   data: {
     message: 'Hello Vue!',
@@ -255,15 +217,8 @@ var app = new Vue({
           console.log("sign out");
           UserService.signOut();
           this.$data.user = UserService.anonymousUser;
-      },
-      testCookies: function(event) {
-          console.log("TODO: test cookies")
-          tc()
       }
   },
-    // coponents: {
-    //
-    // }
   template: `
     <div class="container">
       <nav class="navbar navbar-default">
@@ -273,7 +228,6 @@ var app = new Vue({
           </div>
           <sign-in-controls v-if="user.anonymous" v-on:signedIn="userResolved"></sign-in-controls>
           <div id="navbar" class="navbar-collapse collapse">
-            <input type="button" v-on:click="testCookies" value="Test Cookies"/>
             <ul class="nav navbar-nav navbar-right">
               <p v-if="user.id && user.nick" class="navbar-text">{{user.nick}}</p>
               <li><a v-if="user.id" v-on:click="signOut" href="#">Sign out</a></li>
