@@ -21,9 +21,6 @@ const anonymousUser = {
 
 function setUpAWS(user) {
     const logins = {}
-    // const accessToken = user.getSignInUserSession().getAccessToken()
-    // const jAccessToken = accessToken.getJwtToken()
-    // console.log("Got access token", accessToken, jAccessToken)
     const token = user.getSignInUserSession().getIdToken().getJwtToken()
     const loginKey = "cognito-idp." + appConfig.region + ".amazonaws.com/" + appConfig.UserPoolId
     logins[loginKey] = token
@@ -55,7 +52,7 @@ function setUpContentCookies(idToken) {
 }
 
 function userInfo(user) {
-    var pAttrs = new Promise(function (resolve, reject) {
+    const pAttrs = new Promise(function (resolve, reject) {
             user.getUserAttributes(function (err, res) {
                 if (err) reject(err);
                 else resolve(res);
@@ -68,7 +65,7 @@ function userInfo(user) {
             setUpAWS(user)
             setUpContentCookies(user.getSignInUserSession().getIdToken().getJwtToken())
 
-            var nickAttr = res.find(el => {return el.Name == "nickname";})
+            const nickAttr = res.find(el => {return el.Name == "nickname";})
 
             if (nickAttr) resolve({
                 anonymouse: false,
@@ -84,13 +81,13 @@ const UserService = {
     anonymousUser: anonymousUser,
 
     authenticate: function (login, password) {
-        var authenticationData = {
+        const authenticationData = {
             Username: login,
             Password: password,
         };
-        var authenticationDetails = new AuthenticationDetails(authenticationData);
+        const authenticationDetails = new AuthenticationDetails(authenticationData);
 
-        var userData = {
+        const userData = {
             Username: login,
             Pool: userPool
         };
@@ -111,10 +108,9 @@ const UserService = {
     },
 
     resolveCurrentUser: function () {
-        var pAnonymous = new Promise(function (resolve, reject) { resolve(anonymousUser) })
+        const pAnonymous = new Promise(function (resolve, reject) { resolve(anonymousUser) })
 
-
-        var user = userPool.getCurrentUser();
+        const user = userPool.getCurrentUser();
 
         if (user == null) {
             return pAnonymous;

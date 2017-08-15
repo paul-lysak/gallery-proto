@@ -54,12 +54,17 @@ const GalleryService = {
         })
     },
 
+    //deprecated - use distributionUrl and cookies instead
     preSign: function(dir, file) {
         const s3 = new AWS.S3();
         const key = appConfig.galleryFolder + appendSlash(dir) + file;
         const url = s3.getSignedUrl("getObject", {Bucket: appConfig.galleryBucket, Key: key, Expires: appConfig.linkExpirationTimeout});
         console.log("presigned url", dir, file, url);
         return url;
+    },
+
+    distributionUrl: function(dir, file) {
+        return stripSuffix(appConfig.contentBaseUrl, "/") + appendSlash(dir) + file
     }
 }
 

@@ -131,11 +131,15 @@ Vue.component("gallery-folder", {
                 that.files = folderContent.files;
             })
         },
-        downloadFile: function(file) {
-            const url = GalleryService.preSign(this.folder, file)
-            const win = window.open(url, '_blank');
-            win.focus();
+        fileUrl: function(f) {
+            return GalleryService.distributionUrl(this.folder, f)
         }
+        // ,downloadFile: function(file) {
+        //     const url = GalleryService.preSign(this.folder, file)
+            // const url = GalleryService.distributionUrl(this.folder, file)
+            // const win = window.open(url, '_blank');
+            // win.focus();
+        // }
     },
     watch: {
         folder: function(newFolder) {
@@ -152,10 +156,12 @@ Vue.component("gallery-folder", {
         <div v-if="isLoading()">Loading...</div>
         <div v-if="isEmpty()">No files</div>
         <div v-if="nonEmpty()" class="gallery-thumbnail-container">
-            <div v-for="f in files" @click="downloadFile(f)" class="gallery-thumbnail">{{f}}</div>
+            <a v-for="f in files" :href="fileUrl(f)" class="gallery-thumbnail">{{f}}</a>
         </div>
     </div>
     `
+
+    // <div v-for="f in files" @click="downloadFile(f)" class="gallery-thumbnail">{{f}}</div>
 })
 
 Vue.component("gallery-content", {
