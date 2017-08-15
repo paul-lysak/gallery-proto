@@ -32,23 +32,38 @@ function setUpAWS(user) {
     AWS.config.region = appConfig.region;
     AWS.config.credentials = creds
 
-    creds.get(function() {
-        console.debug("Got AWS credentials", AWS.config.credentials)
+    const res = new Promise(function(resolve, reject) {
+        creds.get(function(err) {
+            if(err)
+                reject("Failed to get AWS credentials: "+err)
+            else
+                resolve(creds)
+        })
     })
+
+    res.then(() => console.debug("Got AWS credentials", AWS.config.credentials))
+    return res
 }
 
 function setUpContentCookies(idToken) {
-    // const url = "https://d3qtwt9vcn2ml2.cloudfront.net/gallery/cookies"
-
     console.debug("requesting cookies with token ", idToken, appConfig.contentCookiesEndpoint)
     const req = new XMLHttpRequest()
     req.open("GET", appConfig.contentCookiesEndpoint, true)
     req.setRequestHeader("Authorization", idToken)
     req.withCredentials = true
-    req.addEventListener("load", function() {console.debug("Successfully received content authentication cookies")});
-    //TODO report this error to main app so that it could be displayed with toaster
-    req.addEventListener("error", function() {console.error("Failed to get content authentication cookies")});
+
+    const res = new Promise(function(resolve, reject) {
+        req.addEventListener("load", event => resolve("TODO"))
+        req.addEventListener("error", (event) => {
+            console.error("Cookies creation error", event)
+            reject("Failed to get content authentication cookies")
+        })
+    })
     req.send()
+
+    res.then(ok => console.debug("Successfully received content authentication cookies"),
+        err => console.error("Failed to get content authentication cookies", err))
+    return res
 }
 
 function userInfo(user) {
@@ -59,21 +74,22 @@ function userInfo(user) {
             })
         });
 
-    return pAttrs.then(function (res) {
-        console.log("Got user attributes", res)
-        return new Promise(function (resolve, reject) {
-            setUpAWS(user)
-            setUpContentCookies(user.getSignInUserSession().getIdToken().getJwtToken())
+    const pAfterService = pAttrs.then(function(res) {
+        return Promise.all([setUpAWS(user),
+            setUpContentCookies(user.getSignInUserSession().getIdToken().getJwtToken())])
+            .then(() => res)
+    })
 
-            const nickAttr = res.find(el => {return el.Name == "nickname";})
+    return pAfterService.then(function (res) {
+        console.debug("Got user attributes", res)
+        const nickAttr = res.find(el => {return el.Name == "nickname";})
 
-            if (nickAttr) resolve({
-                anonymouse: false,
-                id: user.username,
-                nick: nickAttr.Value
-            })
-            else reject("User has no nickname attribute")
+        if (nickAttr) return Promise.resolve({
+            anonymouse: false,
+            id: user.username,
+            nick: nickAttr.Value
         })
+        else return Promise.reject("User has no nickname attribute")
     })
 }
 
@@ -128,7 +144,7 @@ const UserService = {
                 function (err) {
                     console.warn("Couldn't get user attributes, clearing current user", err);
                     // user.signOut();
-                    return pAnonymous;
+                    return pUserInfo
                 })
         }
     },

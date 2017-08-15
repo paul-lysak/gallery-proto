@@ -251,7 +251,11 @@ var app = new Vue({
 
 
 
-UserService.resolveCurrentUser().then(function(user) {
-    app.userResolved(user)
-})
+UserService.resolveCurrentUser().then(
+    user => { app.userResolved(user)},
+    err => {
+        console.error("failed to resolved user", err)
+        Vue.prototype.$toaster.error(err)
+        app.userResolved(UserService.anonymousUser)
+    })
 
