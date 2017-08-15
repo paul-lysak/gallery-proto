@@ -11,7 +11,6 @@ libraryDependencies ++= Seq(
   "com.amazonaws" % "aws-java-sdk-cognitoidp" % "1.11.176",
   "com.amazonaws" % "aws-java-sdk-cloudfront" % "1.11.176",
   "com.amazonaws" % "aws-java-sdk-kms" % "1.11.176",
-//  "com.nimbusds" % "nimbus-jose-jwt" % "4.23",
   "org.slf4j" % "slf4j-log4j12" % "1.7.25",
 //  "commons-io" % "commons-io" % "2.4" % "test",
   "org.scalatest" %% "scalatest" % "3.0.1" % "test",
