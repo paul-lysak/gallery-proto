@@ -13,48 +13,35 @@ import org.slf4j.LoggerFactory
 import scala.collection.JavaConverters._
 
 /**
+  *
+  * Due to API Gateway peculiarities only works properly if request has Accept: image/jpeg header, otherwise returns base64-encoded image
+  *
   * Created by Paul Lysak on 15/08/17.
   */
-//class ResizerLambda extends RequestHandler[java.util.Map[String, AnyRef], AwsProxyResponse] {
-  class ResizerLambda extends RequestHandler[java.util.Map[String, AnyRef], String] {
-//  class ResizerLambda extends RequestHandler[AwsProxyRequest, AwsProxyResponse] {
-//  override def handleRequest(input: AwsProxyRequest, context: Context): AwsProxyResponse = {
-//    override def handleRequest(input: java.util.Map[String, AnyRef] , context: Context): AwsProxyResponse = {
-  override def handleRequest(input: java.util.Map[String, AnyRef] , context: Context): String = {
+  class ResizerLambda extends RequestHandler[AwsProxyRequest, AwsProxyResponse] {
+  override def handleRequest(input: AwsProxyRequest, context: Context): AwsProxyResponse = {
+    val pathParams = Option(input.getPathParameters).fold(Map.empty[String, String])(_.asScala.toMap)
+    val queryParams = Option(input.getQueryStringParameters).fold(Map.empty[String, String])(_.asScala.toMap)
 
-//      log.debug(s"Full request=${inputMap.asScala.toMap}, custom = ${context.getClientContext.getCustom.asScala}, env=${context.getClientContext.getEnvironment.asScala}")
-//      log.debug(s"Full request=${inputMap.asScala.toMap}")
+    log.debug(s"Path params=${pathParams}, query params=${queryParams}")
 
-//      val input = new AwsProxyRequest()
-//    val pathParams = Option(input.getPathParameters).fold(Map.empty[String, String])(_.asScala.toMap)
-//    val queryParams = Option(input.getQueryStringParameters).fold(Map.empty[String, String])(_.asScala.toMap)
+    val filePathOpt = Option(pathParams.get(FILE_PATH_PARAM))
+      .getOrElse(queryParams(FILE_PATH_PARAM))
+    val wOpt = queryParams.get(WIDTH_PARAM)
+    val hOpt = queryParams.get(HEIGHT_PARAM)
 
-  val re = new RequestExtractor(input)
-
-    log.debug(s"Path params=${re.pathParams}, query params=${re.queryParams}")
-
-    val filePathOpt = Option(re.pathParams.get(FILE_PATH_PARAM))
-      .getOrElse(re.queryParams(FILE_PATH_PARAM))
-    val wOpt = Option(re.queryParams.get(WIDTH_PARAM))
-    val hOpt = Option(re.queryParams.get(HEIGHT_PARAM))
     (wOpt, hOpt, filePathOpt) match {
-      case (None, None, _) => validationFailed(s"Neither $WIDTH_PARAM, nor $HEIGHT_PARAM query parameter not specified").toString
-      case (_, _, None) => validationFailed(s"$FILE_PATH_PARAM path or query parameter not specified").toString
+      case (None, None, _) => validationFailed(s"Neither $WIDTH_PARAM, nor $HEIGHT_PARAM query parameter not specified")
+      case (_, _, None) => validationFailed(s"$FILE_PATH_PARAM path or query parameter not specified")
       case (wO, hO, Some(filePath)) =>
-//        val res = new AwsProxyResponse(200,
-//          Map("Content-Type" -> "image/jpeg").asJava,
-//          samplePicture()
-//        )
-//        res.setBase64Encoded(true)
-//        res
-        samplePicture()
-//        new AwsProxyResponse(200,
-//          Map("Content-Type" -> "application/json").asJava,
-//        s"""
-//          |{"message": "TODO: re-code $filePath to $wO by $hO"}
-//        """.stripMargin.trim)
+        log.debug(s"Resizing $filePath to $wO*$hO")
+        val res = new AwsProxyResponse(200,
+          Map("Content-Type" -> "image/jpeg").asJava,
+          samplePicture()
+        )
+        res.setBase64Encoded(true)
+        res
     }
-
   }
 
   private def samplePicture(): String = {
