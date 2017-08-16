@@ -65,6 +65,11 @@ const GalleryService = {
 
     distributionUrl: function(dir, file) {
         return stripSuffix(appConfig.contentBaseUrl, "/") + appendSlash(dir) + file
+    },
+
+    thumbnailUrl: function(dir, file, w, h) {
+        const query = "?w="+w+"&h="+h
+        return stripSuffix(appConfig.thumbnailBaseUrl, "/") + appendSlash(dir) + file + query
     }
 }
 

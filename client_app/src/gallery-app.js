@@ -133,6 +133,9 @@ Vue.component("gallery-folder", {
         },
         fileUrl: function(f) {
             return GalleryService.distributionUrl(this.folder, f)
+        },
+        thumbnailUrl: function(f) {
+            return GalleryService.thumbnailUrl(this.folder, f, 160, 160)
         }
         // ,downloadFile: function(file) {
         //     const url = GalleryService.preSign(this.folder, file)
@@ -156,7 +159,11 @@ Vue.component("gallery-folder", {
         <div v-if="isLoading()">Loading...</div>
         <div v-if="isEmpty()">No files</div>
         <div v-if="nonEmpty()" class="gallery-thumbnail-container">
-            <a v-for="f in files" :href="fileUrl(f)" class="gallery-thumbnail">{{f}}</a>
+            <div v-for="f in files" class="gallery-thumbnail">
+                <div class="gallery-thumbnail-content">
+                    <a :href="fileUrl(f)" ><img :alt="f" :src="thumbnailUrl(f)"/></a>
+                </div>
+            </div>
         </div>
     </div>
     `

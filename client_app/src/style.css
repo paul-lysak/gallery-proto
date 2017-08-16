@@ -52,9 +52,19 @@
 
 .gallery-thumbnail {
     display: inline-block;
+    /*display: flex;*/
     width: 160px;
     height: 160px;
     border: 1px dotted gray;
     margin: 5px;
-    cursor: pointer;
+    /*cursor: pointer;*/
+    text-align: center;
+}
+
+.gallery-thumbnail-content {
+    position: relative;
+    top: 50%;
+    -webkit-transform: translateY(-50%);
+    -ms-transform: translateY(-50%);
+    transform: translateY(-50%);
 }
