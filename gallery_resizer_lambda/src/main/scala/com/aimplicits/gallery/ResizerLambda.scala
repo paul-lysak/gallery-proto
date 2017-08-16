@@ -9,6 +9,8 @@ import javax.imageio.ImageIO
 import com.amazonaws.serverless.proxy.internal.model.{AwsProxyRequest, AwsProxyResponse}
 import com.amazonaws.services.lambda.runtime.{Context, RequestHandler}
 import com.amazonaws.services.s3.{AmazonS3Client, AmazonS3ClientBuilder}
+import com.drew.imaging.ImageMetadataReader
+import com.drew.metadata.exif.{ExifDirectoryBase, ExifIFD0Directory}
 import org.apache.commons.io.IOUtils
 import org.slf4j.LoggerFactory
 
@@ -93,20 +95,45 @@ class ResizerLambda extends RequestHandler[AwsProxyRequest, AwsProxyResponse] {
     * @return
     */
   private def fitPicture(src: Array[Byte], maxW: Option[Int], maxH: Option[Int]): Array[Byte] = {
+
     val img = ImageIO.read(new ByteArrayInputStream(src))
-    val props = img.getPropertyNames.toSeq
-    log.debug(s"Img properties: $props")
+//    val props = img.getPropertyNames.toSeq
+//    log.debug(s"Img properties: $props")
 
     val srcW = img.getWidth
     val srcH = img.getHeight
 
     val (dstW, dstH) = calculateDstDimensions(srcW, srcH, maxW, maxH)
 
-    log.debug(s"Original size: $srcW*$srcH, scaling to: $dstW*$dstH")
+    log.debug(s"Original size: $srcW*$srcH, scaling to: $dstW*$dstH. Orientation: $o")
     val dstImg = new BufferedImage(dstW, dstH, img.getType)
     val g = dstImg.createGraphics();
     g.setRenderingHint(RenderingHints.KEY_INTERPOLATION,
     RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+
+
+                  getOrientation(src) match {
+                    case 1 => //norm
+                    case 2 => // Flip X
+//                        scaledImg = Scalr.rotate(scaledImg, Rotation.FLIP_HORZ);
+                    case 3 => // PI rotation
+//                        scaledImg = Scalr.rotate(scaledImg, Rotation.CW_180);
+                    case 4 => // Flip Y
+//                        scaledImg = Scalr.rotate(scaledImg, Rotation.FLIP_VERT);
+                    case 5 => // - PI/2 and Flip X
+//                        scaledImg = Scalr.rotate(scaledImg, Rotation.CW_90);
+//                        scaledImg = Scalr.rotate(scaledImg, Rotation.FLIP_HORZ);
+                    case 6 => // -PI/2 and -width
+//                        scaledImg = Scalr.rotate(scaledImg, Rotation.CW_90);
+                    case 7 => // PI/2 and Flip
+//                        scaledImg = Scalr.rotate(scaledImg, Rotation.CW_90);
+//                        scaledImg = Scalr.rotate(scaledImg, Rotation.FLIP_VERT);
+                    case 8 => // PI / 2
+//                        scaledImg = Scalr.rotate(scaledImg, Rotation.CW_270);
+                    case other =>
+                      log.warn(s"Unknown orientation: $other")
+                    }
+
 
     g.drawImage(img, 0, 0, dstW, dstH, 0, 0, img.getWidth(), img.getHeight(), null);
     g.dispose()
@@ -114,6 +141,15 @@ class ResizerLambda extends RequestHandler[AwsProxyRequest, AwsProxyResponse] {
     val baos = new ByteArrayOutputStream()
     ImageIO.write(dstImg, "jpg", baos)
     baos.toByteArray
+  }
+
+  private def getOrientation(src: Array[Byte]): Int = {
+    val md = ImageMetadataReader.readMetadata(new ByteArrayInputStream(src))
+    val dir = md.getFirstDirectoryOfType(classOf[ExifIFD0Directory])
+    val orientation = dir.getInt(ExifDirectoryBase.TAG_ORIENTATION)
+
+    log.debug(s"Orientation is: $orientation")
+    orientation
   }
 
   private def samplePicture(): Array[Byte] = {
