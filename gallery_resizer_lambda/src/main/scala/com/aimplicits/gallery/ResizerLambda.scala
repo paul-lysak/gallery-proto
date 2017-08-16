@@ -8,6 +8,8 @@ import javax.imageio.ImageIO
 
 import com.amazonaws.serverless.proxy.internal.model.{AwsProxyRequest, AwsProxyResponse}
 import com.amazonaws.services.lambda.runtime.{Context, RequestHandler}
+import com.amazonaws.services.s3.{AmazonS3Client, AmazonS3ClientBuilder}
+import org.apache.commons.io.IOUtils
 import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConverters._
@@ -18,30 +20,47 @@ import scala.collection.JavaConverters._
   *
   * Created by Paul Lysak on 15/08/17.
   */
-  class ResizerLambda extends RequestHandler[AwsProxyRequest, AwsProxyResponse] {
+class ResizerLambda extends RequestHandler[AwsProxyRequest, AwsProxyResponse] {
   override def handleRequest(input: AwsProxyRequest, context: Context): AwsProxyResponse = {
-    val pathParams = Option(input.getPathParameters).fold(Map.empty[String, String])(_.asScala.toMap)
-    val queryParams = Option(input.getQueryStringParameters).fold(Map.empty[String, String])(_.asScala.toMap)
+    val pathParams: Map[String, String] = Option(input.getPathParameters).fold(Map.empty[String, String])(_.asScala.toMap)
+    val queryParams: Map[String, String] = Option(input.getQueryStringParameters).fold(Map.empty[String, String])(_.asScala.toMap)
 
     log.debug(s"Path params=${pathParams}, query params=${queryParams}")
 
-    val filePathOpt = Option(pathParams.get(FILE_PATH_PARAM))
-      .getOrElse(queryParams(FILE_PATH_PARAM))
-    val wOpt = queryParams.get(WIDTH_PARAM)
-    val hOpt = queryParams.get(HEIGHT_PARAM)
+
+    val filePathOpt: Option[String] = pathParams.get(FILE_PATH_PARAM).orElse(queryParams.get(FILE_PATH_PARAM))
+    val wOpt = queryParams.get(WIDTH_PARAM).flatMap(toIntOpt("w"))
+    val hOpt = queryParams.get(HEIGHT_PARAM).flatMap(toIntOpt("h"))
 
     (wOpt, hOpt, filePathOpt) match {
       case (None, None, _) => validationFailed(s"Neither $WIDTH_PARAM, nor $HEIGHT_PARAM query parameter not specified")
       case (_, _, None) => validationFailed(s"$FILE_PATH_PARAM path or query parameter not specified")
       case (wO, hO, Some(filePath)) =>
-        log.debug(s"Resizing $filePath to $wO*$hO")
+        log.debug(s"Bucket: ${params.galleryBucket}, folder: ${params.galleryFolder}")
         val res = new AwsProxyResponse(200,
           Map("Content-Type" -> "image/jpeg").asJava,
-          samplePicture()
+          scalePicture(filePath, wO, hO)
         )
         res.setBase64Encoded(true)
         res
     }
+  }
+
+  private def scalePicture(filePath: String, maxWidth: Option[Int], maxHeight: Option[Int]): String = {
+    val key = s"${params.galleryFolder}/$filePath"
+    log.debug(s"Resizing $key from bucket ${params.galleryBucket} to fit into $maxWidth*$maxHeight")
+    val s3Client = AmazonS3ClientBuilder.defaultClient()
+    val obj = s3Client.getObject(params.galleryBucket, key)
+    obj.getObjectContent
+    val content = try {
+      IOUtils.toByteArray(obj.getObjectContent)
+    } finally {
+      IOUtils.closeQuietly(obj.getObjectContent)
+    }
+
+    log.info(s"Object $key size: ${content.length}")
+
+    samplePicture()
   }
 
   private def samplePicture(): String = {
@@ -75,6 +94,29 @@ import scala.collection.JavaConverters._
       s"""
         |{"message": "$msg"}
       """.stripMargin.trim)
+  }
+
+  private def toIntOpt(paramName: String)(str: String): Option[Int] = {
+    try {
+      Option(str.toInt)
+    } catch {
+      case e: NumberFormatException =>
+        log.error(s"$paramName is not an integer: $str")
+        None
+    }
+  }
+
+  private object params {
+    lazy val galleryBucket = getString("galleryBucket")
+    lazy val galleryFolder = getString("galleryFolder")
+
+    private def getStringOpt(key: String): Option[String] = {
+      Option(System.getenv(key))
+    }
+
+     private def getString(key: String): String = {
+      getStringOpt(key).getOrElse(throw new RuntimeException(s"Mandatory parameter $key not specified`"))
+    }
   }
 
   private val WIDTH_PARAM = "w"
