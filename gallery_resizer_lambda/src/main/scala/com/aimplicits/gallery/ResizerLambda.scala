@@ -2,7 +2,7 @@ package com.aimplicits.gallery
 
 import java.awt.{Color, Font, RenderingHints}
 import java.awt.image.BufferedImage
-import java.io.ByteArrayOutputStream
+import java.io.{ByteArrayInputStream, ByteArrayOutputStream}
 import java.util.Base64
 import javax.imageio.ImageIO
 
@@ -39,14 +39,14 @@ class ResizerLambda extends RequestHandler[AwsProxyRequest, AwsProxyResponse] {
         log.debug(s"Bucket: ${params.galleryBucket}, folder: ${params.galleryFolder}")
         val res = new AwsProxyResponse(200,
           Map("Content-Type" -> "image/jpeg").asJava,
-          scalePicture(filePath, wO, hO)
+          getScaled(filePath, wO, hO)
         )
         res.setBase64Encoded(true)
         res
     }
   }
 
-  private def scalePicture(filePath: String, maxWidth: Option[Int], maxHeight: Option[Int]): String = {
+  private def getScaled(filePath: String, maxWidth: Option[Int], maxHeight: Option[Int]): String = {
     val key = s"${params.galleryFolder}/$filePath"
     log.debug(s"Resizing $key from bucket ${params.galleryBucket} to fit into $maxWidth*$maxHeight")
     val s3Client = AmazonS3ClientBuilder.defaultClient()
@@ -60,10 +60,63 @@ class ResizerLambda extends RequestHandler[AwsProxyRequest, AwsProxyResponse] {
 
     log.info(s"Object $key size: ${content.length}")
 
-    samplePicture()
+    val out = fitPicture(content, maxWidth, maxHeight)
+    Base64.getEncoder.encodeToString(out)
   }
 
-  private def samplePicture(): String = {
+  private def calculateDstDimensions(srcW: Int, srcH: Int, maxW: Option[Int], maxH: Option[Int]): (Int, Int) = {
+    (maxW, maxH) match {
+      case (Some(w), None) =>
+        val k = w.toDouble / srcW.toDouble
+        (w, (k * srcH).toInt)
+      case (None, Some(h)) =>
+        val k = h.toDouble / srcH.toDouble
+        ((k * srcW).toInt, h)
+      case (None, None) =>
+        (srcW, srcH)
+      case (Some(w), Some(h)) =>
+        val kw = w.toDouble / srcW.toDouble
+        val kh = h.toDouble / srcH.toDouble
+        if(kh > kw)
+          (w, (kw * srcH).toInt)
+        else
+          ((kh * srcW).toInt, h)
+    }
+  }
+
+  /**
+    * Fit image in specified width and height limits maintaining the proportions.
+    *
+    * @param src
+    * @param maxW
+    * @param maxH
+    * @return
+    */
+  private def fitPicture(src: Array[Byte], maxW: Option[Int], maxH: Option[Int]): Array[Byte] = {
+    val img = ImageIO.read(new ByteArrayInputStream(src))
+    val props = img.getPropertyNames.toSeq
+    log.debug(s"Img properties: $props")
+
+    val srcW = img.getWidth
+    val srcH = img.getHeight
+
+    val (dstW, dstH) = calculateDstDimensions(srcW, srcH, maxW, maxH)
+
+    log.debug(s"Original size: $srcW*$srcH, scaling to: $dstW*$dstH")
+    val dstImg = new BufferedImage(dstW, dstH, img.getType)
+    val g = dstImg.createGraphics();
+    g.setRenderingHint(RenderingHints.KEY_INTERPOLATION,
+    RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+
+    g.drawImage(img, 0, 0, dstW, dstH, 0, 0, img.getWidth(), img.getHeight(), null);
+    g.dispose()
+
+    val baos = new ByteArrayOutputStream()
+    ImageIO.write(dstImg, "jpg", baos)
+    baos.toByteArray
+  }
+
+  private def samplePicture(): Array[Byte] = {
     val img = new BufferedImage(100, 100, BufferedImage.TYPE_3BYTE_BGR)
     val g2d = img.createGraphics();
     g2d.setRenderingHint(RenderingHints.KEY_ALPHA_INTERPOLATION, RenderingHints.VALUE_ALPHA_INTERPOLATION_QUALITY);
@@ -85,7 +138,8 @@ class ResizerLambda extends RequestHandler[AwsProxyRequest, AwsProxyResponse] {
     ImageIO.write(img, "jpg", baos)
     g2d.dispose()
 
-    Base64.getEncoder.encodeToString(baos.toByteArray)
+//    Base64.getEncoder.encodeToString(baos.toByteArray)
+    baos.toByteArray
   }
 
   private def validationFailed(msg: String): AwsProxyResponse = {
