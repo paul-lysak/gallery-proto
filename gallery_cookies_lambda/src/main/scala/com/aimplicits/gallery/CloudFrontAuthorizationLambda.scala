@@ -61,8 +61,14 @@ class CloudFrontAuthorizationLambda extends RequestHandler[java.util.Map[String,
 
       //Case mismatches are a dirty hack in order to overcome API Gateway limitations - it only allows single header of single type,
       //while in order to use signed cookies with CloudFront protected content need to have 3 set-cookie headers
-      val sc = Seq("set-cookie" -> c.getPolicy, "Set-Cookie" -> c.getKeyPairId, "Set-cookie" -> c.getSignature).
-        map {case (k, kv) => k -> s"${kv.getKey}=${kv.getValue}"}
+      val sc = Seq("set-cookie" -> c.getPolicy,
+        "Set-Cookie" -> c.getKeyPairId,
+        "Set-cookie" -> c.getSignature).
+        map {
+          case (k, kv) =>
+            val path = params.cookiePath.getOrElse("/")
+            k -> s"${kv.getKey}=${kv.getValue}; HttpOnly; Path=$path"
+        }
 
       new AwsProxyResponse(200,
         (stdHeaders ++ sc).asJava,
@@ -124,6 +130,8 @@ class CloudFrontAuthorizationLambda extends RequestHandler[java.util.Map[String,
   private object params {
 
     lazy val allowedOrigins = getStringOpt("allowedOrigins")
+
+    lazy val cookiePath = getStringOpt("cookiePath")
 
     lazy val requiredRole = getString("requiredRole")
 
