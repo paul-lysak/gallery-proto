@@ -1,4 +1,5 @@
 #!/bin/sh
+set -e
 
 #To be overriden in config.sh:
 #example: --profile=my_profile

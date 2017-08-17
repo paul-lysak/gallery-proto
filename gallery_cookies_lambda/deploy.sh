@@ -1,4 +1,5 @@
 #!/bin/sh
+set -e
 
 ASSEMBLY_FILE=fileb://./target/scala-2.12/gallery_cookies_lambda-assembly-0.1-SNAPSHOT.jar
 #To be overriden in config.sh:

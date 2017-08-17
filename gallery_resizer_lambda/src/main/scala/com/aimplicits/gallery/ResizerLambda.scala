@@ -2,21 +2,16 @@ package com.aimplicits.gallery
 
 import java.awt.geom.AffineTransform
 import java.awt.{Color, Font, RenderingHints}
-import java.awt.image.BufferedImage
+import java.awt.image.{AffineTransformOp, BufferedImage}
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream}
 import java.util.Base64
 import javax.imageio.ImageIO
 
 import com.amazonaws.serverless.proxy.internal.model.{AwsProxyRequest, AwsProxyResponse}
 import com.amazonaws.services.lambda.runtime.{Context, RequestHandler}
-import com.amazonaws.services.s3.{AmazonS3Client, AmazonS3ClientBuilder}
+import com.amazonaws.services.s3.{AmazonS3ClientBuilder}
 import com.drew.imaging.ImageMetadataReader
 import com.drew.metadata.exif.{ExifDirectoryBase, ExifIFD0Directory}
-import org.apache.commons.imaging.Imaging
-import org.apache.commons.imaging.formats.jpeg.JpegImageMetadata
-import org.apache.commons.imaging.formats.jpeg.exif.ExifRewriter
-import org.apache.commons.imaging.formats.tiff.constants.{ExifTagConstants, TiffTagConstants}
-import org.apache.commons.imaging.formats.tiff.write.TiffOutputSet
 import org.apache.commons.io.IOUtils
 import org.slf4j.LoggerFactory
 
@@ -92,6 +87,47 @@ class ResizerLambda extends RequestHandler[AwsProxyRequest, AwsProxyResponse] {
     }
   }
 
+  private def normalizeOrientation(src: BufferedImage, orientation: Int): BufferedImage = {
+    val at = new AffineTransform();
+    orientation match {
+      case 1 => //norm
+      case 2 => // Flip X
+        at.scale(-1.0, 1.0);
+        at.translate(-src.getWidth, 0);
+      case 3 => // PI rotation
+        at.translate(src.getWidth(), src.getHeight())
+        at.quadrantRotate(2)
+      case 4 => // Flip Y
+        at.scale(1.0, -1.0)
+        at.translate(0, -src.getHeight())
+      case 5 => // - PI/2 and Flip X
+        at.quadrantRotate(3)
+        at.scale(-1.0, 1.0)
+      case 6 => // -PI/2 and -width
+        at.translate(src.getHeight(), 0)
+        at.quadrantRotate(1)
+      case 7 => // PI/2 and Flip
+        at.scale(-1.0, 1.0)
+        at.translate(-src.getHeight(), src.getWidth)
+        at.quadrantRotate(3)
+      case 8 => // PI / 2
+        at.translate(0, src.getWidth())
+        at.quadrantRotate(3)
+      case other =>
+        log.warn(s"Unknown orientation: $other")
+    }
+
+    val (dstW, dstH) = orientation match {
+      case 3 | 6 => (src.getHeight, src.getWidth)
+      case _ => (src.getWidth, src.getHeight)
+    }
+
+    val atOp = new AffineTransformOp(at, AffineTransformOp.TYPE_BILINEAR);
+    val dstImg = new BufferedImage(dstW, dstH, src.getType)
+    atOp.filter(src, dstImg)
+    dstImg
+  }
+
   /**
     * Fit image in specified width and height limits maintaining the proportions.
     *
@@ -101,105 +137,36 @@ class ResizerLambda extends RequestHandler[AwsProxyRequest, AwsProxyResponse] {
     * @return
     */
   private def fitPicture(fileName: String, src: Array[Byte], maxW: Option[Int], maxH: Option[Int]): Array[Byte] = {
+    val o = getOrientation(fileName, src)
 
-    val img = ImageIO.read(new ByteArrayInputStream(src))
-//    val props = img.getPropertyNames.toSeq
-//    log.debug(s"Img properties: $props")
+    //TODO normalize orientation for scaled image rather than original size, it should require less resources
+    val img = normalizeOrientation(ImageIO.read(new ByteArrayInputStream(src)), o)
 
     val srcW = img.getWidth
     val srcH = img.getHeight
 
     val (dstW, dstH) = calculateDstDimensions(srcW, srcH, maxW, maxH)
 
-    val o = getOrientation(fileName, src)
     log.debug(s"Original size: $srcW*$srcH, scaling to: $dstW*$dstH. Orientation: $o")
     val dstImg = new BufferedImage(dstW, dstH, img.getType)
     val g = dstImg.createGraphics();
     g.setRenderingHint(RenderingHints.KEY_INTERPOLATION,
     RenderingHints.VALUE_INTERPOLATION_BILINEAR);
 
-
-
-//    val at = new AffineTransform();
-                  o match {
-                    case 1 => //norm
-                    case 2 => // Flip X
-//                        scaledImg = Scalr.rotate(scaledImg, Rotation.FLIP_HORZ);
-                    case 3 => // PI rotation
-//                        scaledImg = Scalr.rotate(scaledImg, Rotation.CW_180);
-//                       at.translate(dstW, dstH);
-//            at.rotate(Math.PI);
-                    case 4 => // Flip Y
-//                        scaledImg = Scalr.rotate(scaledImg, Rotation.FLIP_VERT);
-                    case 5 => // - PI/2 and Flip X
-//                        scaledImg = Scalr.rotate(scaledImg, Rotation.CW_90);
-//                        scaledImg = Scalr.rotate(scaledImg, Rotation.FLIP_HORZ);
-                    case 6 => // -PI/2 and -width
-//                        scaledImg = Scalr.rotate(scaledImg, Rotation.CW_90);
-                    case 7 => // PI/2 and Flip
-//                        scaledImg = Scalr.rotate(scaledImg, Rotation.CW_90);
-//                        scaledImg = Scalr.rotate(scaledImg, Rotation.FLIP_VERT);
-                    case 8 => // PI / 2
-//                        scaledImg = Scalr.rotate(scaledImg, Rotation.CW_270);
-                    case other =>
-                      log.warn(s"Unknown orientation: $other")
-                    }
-
-
     g.drawImage(img, 0, 0, dstW, dstH, 0, 0, img.getWidth(), img.getHeight(), null);
     g.dispose()
 
     val baos = new ByteArrayOutputStream()
     ImageIO.write(dstImg, "jpg", baos)
-    val scaledImg = baos.toByteArray
-
-
-//    val exif = Imaging.getMetadata(scaledImg).asInstanceOf[JpegImageMetadata].getExif
-//    log.debug(s"Scaled exif: $exif")
-//    val tos = exif.getOutputSet
-    val tos = new TiffOutputSet()
-    log.debug(s"Scaled TOS: $tos")
-    val dir = tos.getOrCreateExifDirectory()
-    dir.add(TiffTagConstants.TIFF_TAG_ORIENTATION, o.toShort)
-    dir.add(TiffTagConstants.TIFF_TAG_IMAGE_DESCRIPTION, "Sample picture")
-
-    val resStrean = new ByteArrayOutputStream()
-    new ExifRewriter().updateExifMetadataLossy(scaledImg, resStrean, tos)
-
-    resStrean.toByteArray
+    baos.toByteArray
   }
 
   private def getOrientation(fileName: String, src: Array[Byte]): Int = {
-//    val md = ImageMetadataReader.readMetadata(new ByteArrayInputStream(src))
-//    val imDir = md.getFirstDirectoryOfType(classOf[ExifIFD0Directory])
-//    val o1 = imDir.getInt(ExifDirectoryBase.TAG_ORIENTATION)
-//    log.debug(s"Orientation o1=$o1")
-
-    Imaging.getMetadata(src) match {
-      case jpegMd: JpegImageMetadata =>
-        val tag = jpegMd.getExif.findField(TiffTagConstants.TIFF_TAG_ORIENTATION)
-        if(tag == null) {
-          log.warn(s"No orientation tag in $fileName - falling back to default orientation")
-          TiffTagConstants.ORIENTATION_VALUE_HORIZONTAL_NORMAL
-        } else {
-          val o = tag.getIntValue
-          log.debug(s"Retrieved orientation from $fileName: $o")
-          o
-        }
-      case _ =>
-        log.warn(s"Couldn't retrieve picture orientation from $fileName - falling back to default orientation")
-        TiffTagConstants.ORIENTATION_VALUE_HORIZONTAL_NORMAL
-    }
-//    val tim = Imaging.getMetadata(src).asInstanceOf[JpegImageMetadata].getExif
-//    log.debug(s"TIM=$tim")
-//    val tag = tim.findField(TiffTagConstants.TIFF_TAG_ORIENTATION)
-//    log.debug(s"Fields = ${tim.getItems.asScala.toSeq}")
-//    log.debug(s"Tag=$tag")
-//    val orientation = tag.getIntValue
-
-//    val orientation = 0
-//    log.debug(s"Orientation is: $orientation")
-//    orientation
+    val md = ImageMetadataReader.readMetadata(new ByteArrayInputStream(src))
+    val imDir = md.getFirstDirectoryOfType(classOf[ExifIFD0Directory])
+    val o1 = imDir.getInt(ExifDirectoryBase.TAG_ORIENTATION)
+    log.debug(s"Orientation of $fileName: $o1")
+    o1
   }
 
   private def samplePicture(): Array[Byte] = {
