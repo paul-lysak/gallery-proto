@@ -52,6 +52,8 @@
 
 .gallery-thumbnail {
     display: inline-block;
+    float: left;
+    vertical-aligh: top;
     /*display: flex;*/
     width: 160px;
     height: 160px;

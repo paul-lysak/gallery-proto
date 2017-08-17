@@ -88,44 +88,48 @@ class ResizerLambda extends RequestHandler[AwsProxyRequest, AwsProxyResponse] {
   }
 
   private def normalizeOrientation(src: BufferedImage, orientation: Int): BufferedImage = {
-    val at = new AffineTransform();
-    orientation match {
-      case 1 => //norm
-      case 2 => // Flip X
-        at.scale(-1.0, 1.0);
-        at.translate(-src.getWidth, 0);
-      case 3 => // PI rotation
-        at.translate(src.getWidth(), src.getHeight())
-        at.quadrantRotate(2)
-      case 4 => // Flip Y
-        at.scale(1.0, -1.0)
-        at.translate(0, -src.getHeight())
-      case 5 => // - PI/2 and Flip X
-        at.quadrantRotate(3)
-        at.scale(-1.0, 1.0)
-      case 6 => // -PI/2 and -width
-        at.translate(src.getHeight(), 0)
-        at.quadrantRotate(1)
-      case 7 => // PI/2 and Flip
-        at.scale(-1.0, 1.0)
-        at.translate(-src.getHeight(), src.getWidth)
-        at.quadrantRotate(3)
-      case 8 => // PI / 2
-        at.translate(0, src.getWidth())
-        at.quadrantRotate(3)
-      case other =>
-        log.warn(s"Unknown orientation: $other")
-    }
+    if(orientation == EXIF_ORIENTATION_NORM) {
+      src
+    } else {
+      val at = new AffineTransform();
+      orientation match {
+        case 1 => //norm
+        case 2 => // Flip X
+          at.scale(-1.0, 1.0);
+          at.translate(-src.getWidth, 0);
+        case 3 => // PI rotation
+          at.translate(src.getWidth(), src.getHeight())
+          at.quadrantRotate(2)
+        case 4 => // Flip Y
+          at.scale(1.0, -1.0)
+          at.translate(0, -src.getHeight())
+        case 5 => // - PI/2 and Flip X
+          at.quadrantRotate(3)
+          at.scale(-1.0, 1.0)
+        case 6 => // -PI/2 and -width
+          at.translate(src.getHeight(), 0)
+          at.quadrantRotate(1)
+        case 7 => // PI/2 and Flip
+          at.scale(-1.0, 1.0)
+          at.translate(-src.getHeight(), src.getWidth)
+          at.quadrantRotate(3)
+        case 8 => // PI / 2
+          at.translate(0, src.getWidth())
+          at.quadrantRotate(3)
+        case other =>
+          log.warn(s"Unknown orientation: $other")
+      }
 
-    val (dstW, dstH) = orientation match {
-      case 3 | 6 => (src.getHeight, src.getWidth)
-      case _ => (src.getWidth, src.getHeight)
-    }
+      val (dstW, dstH) = orientation match {
+        case 3 | 6 => (src.getHeight, src.getWidth)
+        case _ => (src.getWidth, src.getHeight)
+      }
 
-    val atOp = new AffineTransformOp(at, AffineTransformOp.TYPE_BILINEAR);
-    val dstImg = new BufferedImage(dstW, dstH, src.getType)
-    atOp.filter(src, dstImg)
-    dstImg
+      val atOp = new AffineTransformOp(at, AffineTransformOp.TYPE_BILINEAR);
+      val dstImg = new BufferedImage(dstW, dstH, src.getType)
+      atOp.filter(src, dstImg)
+      dstImg
+    }
   }
 
   /**
@@ -163,10 +167,16 @@ class ResizerLambda extends RequestHandler[AwsProxyRequest, AwsProxyResponse] {
 
   private def getOrientation(fileName: String, src: Array[Byte]): Int = {
     val md = ImageMetadataReader.readMetadata(new ByteArrayInputStream(src))
-    val imDir = md.getFirstDirectoryOfType(classOf[ExifIFD0Directory])
-    val o1 = imDir.getInt(ExifDirectoryBase.TAG_ORIENTATION)
-    log.debug(s"Orientation of $fileName: $o1")
-    o1
+    Option(md.getFirstDirectoryOfType(classOf[ExifIFD0Directory])) match {
+      case Some(imDir) =>
+        val o = imDir.getInt(ExifDirectoryBase.TAG_ORIENTATION)
+        log.debug(s"Orientation of $fileName: $o")
+        o
+      case None =>
+        log.debug(s"No metadata directory in $fileName, assuming default orientation $EXIF_ORIENTATION_NORM")
+        EXIF_ORIENTATION_NORM
+    }
+
   }
 
   private def samplePicture(): Array[Byte] = {
@@ -225,6 +235,8 @@ class ResizerLambda extends RequestHandler[AwsProxyRequest, AwsProxyResponse] {
       getStringOpt(key).getOrElse(throw new RuntimeException(s"Mandatory parameter $key not specified`"))
     }
   }
+
+  private val EXIF_ORIENTATION_NORM = 1
 
   private val WIDTH_PARAM = "w"
   private val HEIGHT_PARAM = "h"
