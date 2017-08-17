@@ -1,5 +1,6 @@
 package com.aimplicits.gallery
 
+import java.awt.geom.AffineTransform
 import java.awt.{Color, Font, RenderingHints}
 import java.awt.image.BufferedImage
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream}
@@ -11,6 +12,11 @@ import com.amazonaws.services.lambda.runtime.{Context, RequestHandler}
 import com.amazonaws.services.s3.{AmazonS3Client, AmazonS3ClientBuilder}
 import com.drew.imaging.ImageMetadataReader
 import com.drew.metadata.exif.{ExifDirectoryBase, ExifIFD0Directory}
+import org.apache.commons.imaging.Imaging
+import org.apache.commons.imaging.formats.jpeg.JpegImageMetadata
+import org.apache.commons.imaging.formats.jpeg.exif.ExifRewriter
+import org.apache.commons.imaging.formats.tiff.constants.{ExifTagConstants, TiffTagConstants}
+import org.apache.commons.imaging.formats.tiff.write.TiffOutputSet
 import org.apache.commons.io.IOUtils
 import org.slf4j.LoggerFactory
 
@@ -62,7 +68,7 @@ class ResizerLambda extends RequestHandler[AwsProxyRequest, AwsProxyResponse] {
 
     log.info(s"Object $key size: ${content.length}")
 
-    val out = fitPicture(content, maxWidth, maxHeight)
+    val out = fitPicture(key, content, maxWidth, maxHeight)
     Base64.getEncoder.encodeToString(out)
   }
 
@@ -94,7 +100,7 @@ class ResizerLambda extends RequestHandler[AwsProxyRequest, AwsProxyResponse] {
     * @param maxH
     * @return
     */
-  private def fitPicture(src: Array[Byte], maxW: Option[Int], maxH: Option[Int]): Array[Byte] = {
+  private def fitPicture(fileName: String, src: Array[Byte], maxW: Option[Int], maxH: Option[Int]): Array[Byte] = {
 
     val img = ImageIO.read(new ByteArrayInputStream(src))
 //    val props = img.getPropertyNames.toSeq
@@ -105,6 +111,7 @@ class ResizerLambda extends RequestHandler[AwsProxyRequest, AwsProxyResponse] {
 
     val (dstW, dstH) = calculateDstDimensions(srcW, srcH, maxW, maxH)
 
+    val o = getOrientation(fileName, src)
     log.debug(s"Original size: $srcW*$srcH, scaling to: $dstW*$dstH. Orientation: $o")
     val dstImg = new BufferedImage(dstW, dstH, img.getType)
     val g = dstImg.createGraphics();
@@ -112,12 +119,16 @@ class ResizerLambda extends RequestHandler[AwsProxyRequest, AwsProxyResponse] {
     RenderingHints.VALUE_INTERPOLATION_BILINEAR);
 
 
-                  getOrientation(src) match {
+
+//    val at = new AffineTransform();
+                  o match {
                     case 1 => //norm
                     case 2 => // Flip X
 //                        scaledImg = Scalr.rotate(scaledImg, Rotation.FLIP_HORZ);
                     case 3 => // PI rotation
 //                        scaledImg = Scalr.rotate(scaledImg, Rotation.CW_180);
+//                       at.translate(dstW, dstH);
+//            at.rotate(Math.PI);
                     case 4 => // Flip Y
 //                        scaledImg = Scalr.rotate(scaledImg, Rotation.FLIP_VERT);
                     case 5 => // - PI/2 and Flip X
@@ -140,16 +151,55 @@ class ResizerLambda extends RequestHandler[AwsProxyRequest, AwsProxyResponse] {
 
     val baos = new ByteArrayOutputStream()
     ImageIO.write(dstImg, "jpg", baos)
-    baos.toByteArray
+    val scaledImg = baos.toByteArray
+
+
+//    val exif = Imaging.getMetadata(scaledImg).asInstanceOf[JpegImageMetadata].getExif
+//    log.debug(s"Scaled exif: $exif")
+//    val tos = exif.getOutputSet
+    val tos = new TiffOutputSet()
+    log.debug(s"Scaled TOS: $tos")
+    val dir = tos.getOrCreateExifDirectory()
+    dir.add(TiffTagConstants.TIFF_TAG_ORIENTATION, o.toShort)
+    dir.add(TiffTagConstants.TIFF_TAG_IMAGE_DESCRIPTION, "Sample picture")
+
+    val resStrean = new ByteArrayOutputStream()
+    new ExifRewriter().updateExifMetadataLossy(scaledImg, resStrean, tos)
+
+    resStrean.toByteArray
   }
 
-  private def getOrientation(src: Array[Byte]): Int = {
-    val md = ImageMetadataReader.readMetadata(new ByteArrayInputStream(src))
-    val dir = md.getFirstDirectoryOfType(classOf[ExifIFD0Directory])
-    val orientation = dir.getInt(ExifDirectoryBase.TAG_ORIENTATION)
+  private def getOrientation(fileName: String, src: Array[Byte]): Int = {
+//    val md = ImageMetadataReader.readMetadata(new ByteArrayInputStream(src))
+//    val imDir = md.getFirstDirectoryOfType(classOf[ExifIFD0Directory])
+//    val o1 = imDir.getInt(ExifDirectoryBase.TAG_ORIENTATION)
+//    log.debug(s"Orientation o1=$o1")
 
-    log.debug(s"Orientation is: $orientation")
-    orientation
+    Imaging.getMetadata(src) match {
+      case jpegMd: JpegImageMetadata =>
+        val tag = jpegMd.getExif.findField(TiffTagConstants.TIFF_TAG_ORIENTATION)
+        if(tag == null) {
+          log.warn(s"No orientation tag in $fileName - falling back to default orientation")
+          TiffTagConstants.ORIENTATION_VALUE_HORIZONTAL_NORMAL
+        } else {
+          val o = tag.getIntValue
+          log.debug(s"Retrieved orientation from $fileName: $o")
+          o
+        }
+      case _ =>
+        log.warn(s"Couldn't retrieve picture orientation from $fileName - falling back to default orientation")
+        TiffTagConstants.ORIENTATION_VALUE_HORIZONTAL_NORMAL
+    }
+//    val tim = Imaging.getMetadata(src).asInstanceOf[JpegImageMetadata].getExif
+//    log.debug(s"TIM=$tim")
+//    val tag = tim.findField(TiffTagConstants.TIFF_TAG_ORIENTATION)
+//    log.debug(s"Fields = ${tim.getItems.asScala.toSeq}")
+//    log.debug(s"Tag=$tag")
+//    val orientation = tag.getIntValue
+
+//    val orientation = 0
+//    log.debug(s"Orientation is: $orientation")
+//    orientation
   }
 
   private def samplePicture(): Array[Byte] = {
