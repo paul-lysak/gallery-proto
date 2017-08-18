@@ -156,8 +156,8 @@ Vue.component("gallery-folder", {
         <div v-if="isLoading()">Loading...</div>
         <div v-if="isEmpty()">No files</div>
         <div v-if="nonEmpty()" class="gallery-thumbnail-container">
-            <div v-for="f in files" class="gallery-thumbnail">
-                <div class="gallery-thumbnail-content" @click="select(f)">
+            <div v-for="f in files" class="gallery-thumbnail" @click="select(f)">
+                <div class="gallery-thumbnail-content">
                     <!--<a :href="fileUrl(f)" >-->
                     <img :alt="f" :src="thumbnailUrl(f)"/>
                     <!--</a>-->

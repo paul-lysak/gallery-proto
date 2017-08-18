@@ -110,9 +110,29 @@ const GalleryService = {
         })
     },
 
+    nextClosestSibling: function(dir) {
+        const pathElements = splitPath(dir)
+        if(!pathElements[1])
+            return null //Root reached
+        else
+            return GalleryService.list(pathElements[0]).then(function(parentContent) {
+                const currentIndex = parentContent.folders.indexOf(pathElements[1])
+                console.log("ci", currentIndex)
+                if(currentIndex < 0) {
+                    console.warn("Directory not found in its parents content", pathElements, parentContent.folders)
+                    return null
+                } else if (currentIndex == parentContent.folders.length - 1) {
+                    console.debug("Last dir reached, navigating to parent's closest sibling", pathElements[0])
+                    return GalleryService.nextClosestSibling(pathElements[0])
+                } else {
+                    return stripSuffix(pathElements[0], "/") + "/" + parentContent.folders[currentIndex + 1]
+                }
+            })
+    },
+
     previousDir: function(dir) {
         const pathElements = splitPath(dir)
-        console.log("Extracted parent", pathElements)
+        console.debug("Extracted parent", pathElements)
         if(!pathElements[1]) {
             console.debug("Root folder reached")
             return Promise.resolve(null)
@@ -127,11 +147,21 @@ const GalleryService = {
                     console.debug("First dir reached, navigating to parent dir", pathElements[0])
                     return Promise.resolve(pathElements[0])
                 } else {
-                    const prev = stripSuffix(pathElements[0], "/") + "/" + parentContent.folders[currentIndex - 1]
+                    const prev = appendSlash(pathElements[0]) + parentContent.folders[currentIndex - 1]
                     return GalleryService.lastChildDir(prev)
                 }
             })
         }
+    },
+
+    nextDir: function(dir) {
+        return GalleryService.list(dir).then(function (content) {
+            if(content.folders.length == 0) {
+                return GalleryService.nextClosestSibling(dir)
+            } else {
+                return appendSlash(dir) + content.folders[content.folders.length - 1]
+            }
+        })
     },
 
     previousDirWithFiles: function(dir) {
@@ -151,6 +181,19 @@ const GalleryService = {
                 })
             }
         })
+    },
+
+    nextDirWithFiles: function(dir) {
+        return GalleryService.nextDir(dir).then(function(nextDir) {
+            if(!nextDir)
+                return null;
+            else
+                return GalleryService.list(nextDir).then((nextDirCotent) =>
+                    nextDirCotent.files.length == 0 ? GalleryService.nextDir(nextDir) : nextDir
+                )
+
+        })
+
     },
 
     previousFile: function(dir, file) {
@@ -184,7 +227,14 @@ const GalleryService = {
                 return Promise.resolve(null)
             } else if(currentIndex + 1 > folderContent.files.length - 1) {
                 console.debug("Last file in the directory, no forward navigation ATM")
-                return Promise.resolve(null)
+                return GalleryService.nextDirWithFiles(dir).then(function(nextDir) {
+                    if(!nextDir)
+                        return null
+                    else
+                        return GalleryService.list(nextDir).then((nextDirContent) =>
+                            ({folder: nextDir, file: nextDirContent.files[0]})
+                        )
+                })
             } else {
                 return Promise.resolve({folder: dir, file: folderContent.files[currentIndex + 1]})
             }
