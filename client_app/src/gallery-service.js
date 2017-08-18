@@ -29,29 +29,37 @@ function appendSlash(dir) {
     else return dir + "/";
 }
 
+const dirListCache = {}
 
 const GalleryService = {
     list: function (dir) {
-        const s3 = new AWS.S3();
-        console.info("list directory", dir)
-        const d = appConfig.galleryFolder + appendSlash(dir)
-        return new Promise(function (resolve, reject) {
-            s3.listObjects({
-                Bucket: appConfig.galleryBucket,
-                Prefix: d,
-                Delimiter: "/"
-            }, function (err, res) {
-                if (err) reject(err)
-                else {
-                    // console.log("result", res)
-                    if (res.IsTruncated) console.warn("s3 response truncated, application doesn't handle it yet")
-                    resolve({
-                        folders: res.CommonPrefixes.map(p => stripDir(p.Prefix, d)).filter(f => f.length > 0 ).sort(),
-                        files: res.Contents.map(f => stripDir(f.Key, d)).filter(f => f.length > 0 ).sort()
+        if(dirListCache[dir]) {
+            console.debug("Taking directory content from cache", dir)
+            return Promise.resolve(dirListCache[dir])
+        } else {
+            console.debug("Retrieving directory content from S3", dir)
+            const s3 = new AWS.S3();
+            const d = appConfig.galleryFolder + appendSlash(dir)
+            return new Promise(function (resolve, reject) {
+                s3.listObjects({
+                    Bucket: appConfig.galleryBucket,
+                    Prefix: d,
+                    Delimiter: "/"
+                }, function (err, res) {
+                    if (err) reject(err)
+                    else {
+                        // console.log("result", res)
+                        if (res.IsTruncated) console.warn("s3 response truncated, application doesn't handle it yet")
+                        const ret = {
+                            folders: res.CommonPrefixes.map(p => stripDir(p.Prefix, d)).filter(f => f.length > 0).sort(),
+                            files: res.Contents.map(f => stripDir(f.Key, d)).filter(f => f.length > 0).sort()
+                        }
+                        dirListCache[dir] = ret;
+                        resolve(ret)
+                    }
                 })
-                }
             })
-        })
+        }
     },
 
     //deprecated - use distributionUrl and cookies instead

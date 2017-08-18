@@ -195,10 +195,42 @@ Vue.component("image-viewer", {
             console.log("close that", event)
             this.folder = undefined
             this.file = undefined
+        },
+        prev: function(event) {
+            const that = this
+            GalleryService.list(this.folder).then(function(folderContent) {
+                const currentIndex = folderContent.files.indexOf(that.file)
+                if(currentIndex < 0) {
+                    console.warn("Current file not found in current folder, can't navigate", file, folderContent.files)
+                } else if(currentIndex == 0) {
+                    console.debug("First file in the directory, no backward navigation ATM")
+                } else {
+                    that.showFile(that.folder, folderContent.files[currentIndex - 1])
+                }
+            })
+            console.log("TODO: prev")
+        },
+        next: function(event) {
+            const that = this
+            GalleryService.list(this.folder).then(function(folderContent) {
+                const currentIndex = folderContent.files.indexOf(that.file)
+                if(currentIndex < 0) {
+                    console.warn("Current file not found in current folder, can't navigate", file, folderContent.files)
+                } else if(currentIndex + 1 > folderContent.files.length - 1) {
+                    console.debug("Last file in the directory, no forward navigation ATM")
+                } else {
+                    that.showFile(that.folder, folderContent.files[currentIndex + 1])
+                }
+            })
         }
     },
     template: `
-    <div class="image-viewer" v-if="folder && file" @keydown.esc="close" tabindex="1" ref="main_div">
+    <div class="image-viewer" 
+        v-if="folder && file" 
+        @keydown.left="prev" 
+        @keydown.right="next" 
+        @keydown.esc="close" 
+        tabindex="1" ref="main_div">
       <img :src="imageUrl" v-if="imageUrl" class="image-viewer-content"/>
     </div>`
 
