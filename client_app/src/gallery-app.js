@@ -184,7 +184,6 @@ Vue.component("image-viewer", {
     },
     methods: {
         showFile: function(folder, file) {
-            console.log("TODO: show file", folder, file, this.$refs.main_div)
             this.folder = folder
             this.file = file
             this.imageUrl = undefined
@@ -203,27 +202,19 @@ Vue.component("image-viewer", {
         },
         prev: function(event) {
             const that = this
-            GalleryService.list(this.folder).then(function(folderContent) {
-                const currentIndex = folderContent.files.indexOf(that.file)
-                if(currentIndex < 0) {
-                    console.warn("Current file not found in current folder, can't navigate", file, folderContent.files)
-                } else if(currentIndex == 0) {
-                    console.debug("First file in the directory, no backward navigation ATM")
-                } else {
-                    that.showFile(that.folder, folderContent.files[currentIndex - 1])
+
+            GalleryService.previousFile(this.folder, this.file).then(function(newFile) {
+                if(!!newFile) {
+                    that.showFile(newFile.folder, newFile.file)
                 }
             })
         },
         next: function(event) {
             const that = this
-            GalleryService.list(this.folder).then(function(folderContent) {
-                const currentIndex = folderContent.files.indexOf(that.file)
-                if(currentIndex < 0) {
-                    console.warn("Current file not found in current folder, can't navigate", file, folderContent.files)
-                } else if(currentIndex + 1 > folderContent.files.length - 1) {
-                    console.debug("Last file in the directory, no forward navigation ATM")
-                } else {
-                    that.showFile(that.folder, folderContent.files[currentIndex + 1])
+
+            GalleryService.nextFile(this.folder, this.file).then(function(newFile) {
+                if(!!newFile) {
+                    that.showFile(newFile.folder, newFile.file)
                 }
             })
         },

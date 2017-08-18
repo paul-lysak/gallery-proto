@@ -29,6 +29,26 @@ function appendSlash(dir) {
     else return dir + "/";
 }
 
+/**
+ * Make sure path has slash at the beginning and no slash at the end
+ * @param path
+ */
+function normalizePathSlashes(path) {
+    const p = path.startsWith("/") ? path : "/" + path
+    return stripSuffix(p, "/")
+}
+
+function splitPath(path) {
+    const d = normalizePathSlashes(path)
+    if(d == "/")
+        return ["/", null]
+    const lastSlash = path.lastIndexOf("/")
+    if(lastSlash == 0)
+        return ["/", path.slice(1)] //first-level dir
+    else
+        return [path.slice(0, lastSlash), path.slice(lastSlash + 1)]
+}
+
 const dirListCache = {}
 
 const GalleryService = {
@@ -78,6 +98,63 @@ const GalleryService = {
     thumbnailUrl: function(dir, file, w, h) {
         const query = "?w="+w+"&h="+h
         return stripSuffix(appConfig.thumbnailBaseUrl, "/") + appendSlash(dir) + file + query
+    },
+
+    previousDir: function(dir) {
+        const pathElements = splitPath(dir)
+        console.log("Extracted parent", pathElements)
+        if(!pathElements[1]) {
+            console.debug("Root folder reached")
+            return Promise.resolve(null)
+        } else {
+            return GalleryService.list(pathElements[0]).then(function (parentContent) {
+                const currentIndex = parentContent.folders.indexOf(pathElements[1])
+                console.log("ci", currentIndex)
+                if(currentIndex < 0) {
+                    console.warn("Directory not found in its parents content", pathElements, parentContent.folders)
+                    return Promise.resolve(null)
+                } else if (currentIndex == 0) {
+                    console.debug("First dir reached, navigating to parent dir", pathElements[0])
+                    return Promise.resolve(pathElements[0])
+                } else {
+                    const prev = stripSuffix(pathElements[0], "/") + "/" + parentContent.folders[currentIndex - 1]
+                    //TODO navigate to last child of previous sibling here rather than to just previous sibling
+                    console.debug("Previous dir found", dir, prev)
+                    return Promise.resolve(prev)
+                }
+            })
+        }
+    },
+
+    previousFile: function(dir, file) {
+        return GalleryService.list(dir).then(function(folderContent) {
+            const currentIndex = folderContent.files.indexOf(file)
+            if(currentIndex < 0) {
+                console.warn("Current file not found in current folder, can't navigate", file, folderContent.files)
+                return Promise.resolve(null)
+            } else if(currentIndex == 0) {
+                console.debug("First file in the directory, no backward navigation ATM")
+                GalleryService.previousDir(dir)
+                return Promise.resolve(null)
+            } else {
+                return Promise.resolve({folder: dir, file: folderContent.files[currentIndex - 1]})
+            }
+        })
+    },
+
+    nextFile: function(dir, file) {
+        return GalleryService.list(dir).then(function(folderContent) {
+            const currentIndex = folderContent.files.indexOf(file)
+            if(currentIndex < 0) {
+                console.warn("Current file not found in current folder, can't navigate", file, folderContent.files)
+                return Promise.resolve(null)
+            } else if(currentIndex + 1 > folderContent.files.length - 1) {
+                console.debug("Last file in the directory, no forward navigation ATM")
+                return Promise.resolve(null)
+            } else {
+                return Promise.resolve({folder: dir, file: folderContent.files[currentIndex + 1]})
+            }
+        })
     }
 }
 
