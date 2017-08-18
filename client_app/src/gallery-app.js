@@ -136,17 +136,14 @@ Vue.component("gallery-folder", {
         },
         thumbnailUrl: function(f) {
             return GalleryService.thumbnailUrl(this.folder, f, 160, 160)
+        },
+        select: function(file) {
+            this.$emit("fileSelected", file)
         }
-        // ,downloadFile: function(file) {
-        //     const url = GalleryService.preSign(this.folder, file)
-            // const url = GalleryService.distributionUrl(this.folder, file)
-            // const win = window.open(url, '_blank');
-            // win.focus();
-        // }
+
     },
     watch: {
         folder: function(newFolder) {
-            console.log("folder updated", this.folder, newFolder)
             this.refreshFiles();
         }
     },
@@ -160,15 +157,51 @@ Vue.component("gallery-folder", {
         <div v-if="isEmpty()">No files</div>
         <div v-if="nonEmpty()" class="gallery-thumbnail-container">
             <div v-for="f in files" class="gallery-thumbnail">
-                <div class="gallery-thumbnail-content">
-                    <a :href="fileUrl(f)" ><img :alt="f" :src="thumbnailUrl(f)"/></a>
+                <div class="gallery-thumbnail-content" @click="select(f)">
+                    <!--<a :href="fileUrl(f)" >-->
+                    <img :alt="f" :src="thumbnailUrl(f)"/>
+                    <!--</a>-->
                 </div>
             </div>
         </div>
-    </div>
-    `
+    </div>`
 
     // <div v-for="f in files" @click="downloadFile(f)" class="gallery-thumbnail">{{f}}</div>
+})
+
+Vue.component("image-viewer", {
+    data: function() {
+        return {
+            folder: undefined,
+            file: undefined,
+            imageUrl: undefined
+        }
+    },
+    methods: {
+        showFile: function(folder, file) {
+            console.log("TODO: show file", folder, file, this.$refs.main_div)
+            this.folder = folder
+            this.file = file
+            this.imageUrl = undefined
+            const that = this
+            Vue.nextTick(function() {
+                const d = that.$refs.main_div
+                console.log("focusing on", d, d.clientWidth, d.clientHeight, folder, file)
+                that.imageUrl = GalleryService.thumbnailUrl(that.folder, that.file, d.clientWidth, d.clientHeight)
+                d.focus()
+            })
+        },
+        close: function(event) {
+            console.log("close that", event)
+            this.folder = undefined
+            this.file = undefined
+        }
+    },
+    template: `
+    <div class="image-viewer" v-if="folder && file" @keydown.esc="close" tabindex="1" ref="main_div">
+      <img :src="imageUrl" v-if="imageUrl" class="image-viewer-content"/>
+    </div>`
+
 })
 
 Vue.component("gallery-content", {
@@ -181,19 +214,22 @@ Vue.component("gallery-content", {
       folderSelected: function(folder) {
           console.log("folder selected", folder)
           this.selectedFolder = folder;
+      },
+      fileSelected: function(file) {
+          this.$refs.image_viewer.showFile(this.selectedFolder, file)
       }
   },
   template:
-      `<div class="container">
-        <split-pane>
+      `<div class="">
+        <image-viewer ref="image_viewer"/>
+        <split-pane v-show="true">
           <section slot="left">
             <gallery-tree :folder="'/'" :defaultExpand="true" v-on:folderSelected="folderSelected"></gallery-tree>
           </section>
           <section slot="right">
-            <gallery-folder :folder="selectedFolder"></gallery-folder>
+            <gallery-folder :folder="selectedFolder"  v-on:fileSelected="fileSelected"></gallery-folder>
           </section>
         </split-pane>
-        </div>
       </div>`
 })
 
