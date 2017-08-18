@@ -100,6 +100,16 @@ const GalleryService = {
         return stripSuffix(appConfig.thumbnailBaseUrl, "/") + appendSlash(dir) + file + query
     },
 
+    lastChildDir: function(dir) {
+        return GalleryService.list(dir).then(function(content) {
+            if(content.folders.length == 0) {
+                return dir
+            } else {
+                return GalleryService.lastChildDir(appendSlash(dir) + content.folders[content.folders.length - 1])
+            }
+        })
+    },
+
     previousDir: function(dir) {
         const pathElements = splitPath(dir)
         console.log("Extracted parent", pathElements)
@@ -118,12 +128,29 @@ const GalleryService = {
                     return Promise.resolve(pathElements[0])
                 } else {
                     const prev = stripSuffix(pathElements[0], "/") + "/" + parentContent.folders[currentIndex - 1]
-                    //TODO navigate to last child of previous sibling here rather than to just previous sibling
-                    console.debug("Previous dir found", dir, prev)
-                    return Promise.resolve(prev)
+                    return GalleryService.lastChildDir(prev)
                 }
             })
         }
+    },
+
+    previousDirWithFiles: function(dir) {
+        return GalleryService.previousDir(dir).then(function(prevDir) {
+            if(!prevDir) {
+                console.log("No prev dir", dir)
+                return null
+            } else {
+                return GalleryService.list(prevDir).then(function (prevDirContent) {
+                    if (prevDirContent.files.length == 0) {
+                        console.log("0-len prev dir", dir, prevDir)
+                        return GalleryService.previousDir(prevDir)
+                    } else {
+                        console.log("NZ-len prev dir", dir, prevDir)
+                        return prevDir;
+                    }
+                })
+            }
+        })
     },
 
     previousFile: function(dir, file) {
@@ -134,7 +161,14 @@ const GalleryService = {
                 return Promise.resolve(null)
             } else if(currentIndex == 0) {
                 console.debug("First file in the directory, no backward navigation ATM")
-                GalleryService.previousDir(dir)
+                return GalleryService.previousDirWithFiles(dir).then(function (prevDir) {
+                    console.debug("Previous dir found", dir, prevDir)
+                    if(!prevDir)
+                        return null;
+                    else
+                        return GalleryService.list(prevDir).then((prevDirContent) =>
+                            ({folder: prevDir, file: prevDirContent.files[prevDirContent.files.length - 1]}))
+                })
                 return Promise.resolve(null)
             } else {
                 return Promise.resolve({folder: dir, file: folderContent.files[currentIndex - 1]})
