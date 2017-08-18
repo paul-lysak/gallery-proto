@@ -177,6 +177,11 @@ Vue.component("image-viewer", {
             imageUrl: undefined
         }
     },
+    computed: {
+        fullSizeUrl: function() {
+            return GalleryService.distributionUrl(this.folder, this.file)
+        }
+    },
     methods: {
         showFile: function(folder, file) {
             console.log("TODO: show file", folder, file, this.$refs.main_div)
@@ -208,7 +213,6 @@ Vue.component("image-viewer", {
                     that.showFile(that.folder, folderContent.files[currentIndex - 1])
                 }
             })
-            console.log("TODO: prev")
         },
         next: function(event) {
             const that = this
@@ -222,6 +226,14 @@ Vue.component("image-viewer", {
                     that.showFile(that.folder, folderContent.files[currentIndex + 1])
                 }
             })
+        },
+        click: function(event) {
+            console.log("img click", event)
+            const w = this.$refs.main_div.clientWidth
+            if(event.clientX < w/2)
+                this.prev(event)
+            else
+                this.next(event)
         }
     },
     template: `
@@ -230,7 +242,20 @@ Vue.component("image-viewer", {
         @keydown.left="prev" 
         @keydown.right="next" 
         @keydown.esc="close" 
+        @click="click"
         tabindex="1" ref="main_div">
+      <nav class="navbar navbar-default image-viewer-navbar">
+        <div class="container-fluid">
+          <div class="navbar-collapse collapse">
+            <ul class="nav navbar-nav navbar-center">
+              <li><a :href="fullSizeUrl">{{folder}}/{{file}}</a></li>
+            </ul>
+            <ul class="nav navbar-nav navbar-right">
+              <li><span @click="close" class="icon expand-icon glyphicon glyphicon-remove navbar-text"></span></li>
+            </ul>
+          </div>
+        </div>
+      </nav>
       <img :src="imageUrl" v-if="imageUrl" class="image-viewer-content"/>
     </div>`
 
