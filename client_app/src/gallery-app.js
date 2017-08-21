@@ -24,6 +24,8 @@ Vue.component("sign-in-controls", {
             const that = this;
             event.preventDefault();//to avoid form submission warnings
             UserService.authenticate(this.$data.login, this.$data.password).then(function(user) {
+                that.$data.login = ""
+                that.$data.password = ""
                 that.$emit("signedIn", user);
             }, function(err) {
                 Vue.prototype.$toaster.error("Couldn't sign in: " + err);
@@ -158,9 +160,7 @@ Vue.component("gallery-folder", {
         <div v-if="nonEmpty()" class="gallery-thumbnail-container">
             <div v-for="f in files" class="gallery-thumbnail" @click="select(f)">
                 <div class="gallery-thumbnail-content">
-                    <!--<a :href="fileUrl(f)" >-->
                     <img :alt="f" :src="thumbnailUrl(f)"/>
-                    <!--</a>-->
                 </div>
             </div>
         </div>
@@ -313,7 +313,8 @@ var app = new Vue({
       signOut: function (event) {
           console.log("sign out");
           UserService.signOut();
-          this.$data.user = UserService.anonymousUser;
+          this.bodyComponent = "splash"
+          this.user = UserService.anonymousUser;
       }
   },
   template: `
