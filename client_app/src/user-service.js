@@ -117,10 +117,24 @@ const UserService = {
                 },
                 onFailure: function (err) {
                     reject(err)
+                },
+                newPasswordRequired: function(userAttrs, requiredAttrs) {
+                    // console.log("NPR", userAttrs, requiredAttrs)
+                    // cognitoUser.completeNewPasswordChallenge(newPassword, attributesData, this)
+                    reject({error: "NEW_PASSWORD_REQUIRED", userAttributes: userAttrs, requiredAttributes: requiredAttrs, cognitoUser: cognitoUser})
                 }
             })
         });
         return pSession.then(function (res) {return userInfo(cognitoUser)});
+    },
+
+    finishRegistration: function(cognitoUser, nickname, password) {
+        return new Promise(function(resolve, reject) {
+            cognitoUser.completeNewPasswordChallenge(password, {nickname: nickname}, {
+                onSuccess: (session) => resolve(session),
+                onFailure: (err) => reject(err)
+            })
+        })
     },
 
     resolveCurrentUser: function () {
@@ -138,7 +152,10 @@ const UserService = {
                 })
             });
 
-            const pUserInfo= pSession.then(function (res) {return userInfo(user)})
+            const pUserInfo= pSession.then(function (res) {
+                console.log("Identified the user", user)
+                return userInfo(user)
+            })
 
             return pUserInfo.then(undefined,
                 function (err) {

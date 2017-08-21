@@ -32,7 +32,13 @@ module.exports = {
            inject: false,
            template: require("html-webpack-template"),
            appMountId: "app"
-         }),
+         })
+        // , new webpack.ProvidePlugin({
+        //     jQuery: 'jquery',
+        //     "window.jQuery": 'jquery',
+        //     $: 'jquery',
+        //     jquery: 'jquery'
+        // })
    ],
     // Place output files in `./dist/my-app.js`
     output: {

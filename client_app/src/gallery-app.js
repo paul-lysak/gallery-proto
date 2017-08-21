@@ -9,6 +9,11 @@ Vue.use(Toaster, {timeout: 5000})
 
 import "bootstrap/dist/css/bootstrap.css"
 
+// import jQuery from "jquery"
+window.jQuery = require("jquery")
+const bootstrap = require("bootstrap/dist/js/bootstrap")
+// import "bootstrap/dist/js/bootstrap"
+
 // import appConfig from "./config";
 
 import SplitPane from 'vue-split-pane'
@@ -28,7 +33,11 @@ Vue.component("sign-in-controls", {
                 that.$data.password = ""
                 that.$emit("signedIn", user);
             }, function(err) {
-                Vue.prototype.$toaster.error("Couldn't sign in: " + err);
+                if(err.hasOwnProperty("error") && err.error == "NEW_PASSWORD_REQUIRED") {
+                    that.$emit("newPasswordRequired", err);
+                } else {
+                    Vue.prototype.$toaster.error("Couldn't sign in: " + err);
+                }
             })
         }
     },
@@ -47,6 +56,123 @@ Vue.component("sign-in-controls", {
         <button type="submit" class="btn btn-default" v-on:click="signIn">Sign In</button>
       </form>
     `
+})
+
+function toasterError(msg) {
+    Vue.prototype.$toaster.error(msg)
+}
+
+Vue.component("user-details-dialog", {
+    props: [],
+    data: function() {
+        return {
+            cognitoUser: null,
+            nickname: "",
+            password: "",
+            password2: ""
+        }
+    },
+    methods: {
+        captureUserDetails: function(cognitoUser) {
+            this.cognitoUser = cognitoUser;
+            const that = this
+            Vue.nextTick(function() {
+                jQuery(that.$refs.modal).modal("show")
+                console.log("Capturing details for ", that.cognitoUser)
+            })
+        },
+        submit: function(args) {
+            console.log("TODO submit details", args, this.$data, this.cognitoUser)
+            const that = this;
+            const m = function(field) {
+               if(!that.$data[field] || that.$data[field] == "") {
+                   toasterError(field + " is required")
+                   return true
+               } else {
+                   return false;
+               }
+            }
+
+            if(m("nickname") || m("password") || m("password2")) {
+                //noop
+            } else if(this.$data.password != this.$data.password2) {
+                toasterError("Passwords do not match")
+            } else {
+                UserService.finishRegistration(this.cognitoUser, this.nickname, this.password).then(() => {
+                    jQuery(that.$refs.modal).modal("hide")
+                    that.cognitoUser = null
+                }, (err) => {
+                    console.error("Failed to change the password", that.cognitoUser, err)
+                    toasterError(err)
+                })
+            }
+        }
+    },
+    mounted: function() {
+        console.log("dialog is mounted", this.$refs.modal)
+        //TODO show dialog on captureUserDetails instead
+        // jQuery(this.$refs.modal).modal("show")
+    },
+
+    template: `
+
+
+<div>
+
+    <!--<button type="button" class="btn btn-primary" data-toggle="modal" data-target="#myModal">Modal</button>-->
+            
+    <div v-if="cognitoUser" class="modal fade" tabindex="-1" role="dialog" ref="modal" data-backdrop="static" data-keyboard="false">
+      <div class="modal-dialog" role="document">
+        <div class="modal-content">
+          <div class="modal-header">
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+            <h4 class="modal-title">Complete user registration</h4>
+          </div>
+          <div class="modal-body">
+            <form>
+               <div class="form-group">
+                 <input type="text" class="form-control" placeholder="Nickname" v-model:value="nickname">
+                 <input type="password" class="form-control" placeholder="Password" v-model:value="password">
+                 <input type="password" class="form-control" placeholder="Repeat password" v-model:value="password2">
+              </div>
+            </form>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-default" @click="submit">OK</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    </div>
+`
+
+
+   // template: `
+   //     <div class="container g-center-container">
+   //
+   //    <div class="panel panel-default">
+   //        <div class="panel-heading">
+   //          <h3 class="panel-title">Sign In - Gallery</h3>
+   //        </div>
+   //        <div class="panel-body">
+   //          <form>
+   //            <div class="form-group">
+   //              <input type="text" class="form-control" placeholder="Username">
+   //              <input type="password" class="form-control" placeholder="Password">
+   //           </div>
+   //           <button type="submit" class="btn btn-default">Sign In</button>
+   //        </div>
+   //    </div>
+   //
+   //    <div class="panel">
+   //        <div class="panel-body">
+   //        {{ message }}
+   //        </div>
+   //    </div>
+   //
+   //  </div>
+   // `
+
 })
 
 
@@ -310,6 +436,10 @@ var app = new Vue({
           this.$data.bodyComponent = "gallery-content"
           // awsDemo()
       },
+      captureUserDetails(event) {
+          console.log("TODO capture user details", event)
+          this.$refs.userDetailsDialog.captureUserDetails(event.cognitoUser)
+      },
       signOut: function (event) {
           console.log("sign out");
           UserService.signOut();
@@ -324,7 +454,7 @@ var app = new Vue({
           <div class="navbar-header">
             <a class="navbar-brand" href="#">Gallery</a>
           </div>
-          <sign-in-controls v-if="user.anonymous" v-on:signedIn="userResolved"></sign-in-controls>
+          <sign-in-controls v-if="user.anonymous" v-on:signedIn="userResolved" v-on:newPasswordRequired="captureUserDetails"></sign-in-controls>
           <div id="navbar" class="navbar-collapse collapse">
             <ul class="nav navbar-nav navbar-right">
               <p v-if="user.id && user.nick" class="navbar-text">{{user.nick}}</p>
@@ -337,6 +467,7 @@ var app = new Vue({
 
     <component v-bind:is="bodyComponent"></component>
 
+    <user-details-dialog ref="userDetailsDialog"/>
     </div>
     `
 }).$mount("#app")
