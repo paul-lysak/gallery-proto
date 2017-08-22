@@ -1,53 +1,9 @@
 import appConfig from "./config";
 
+import U from "./utils";
+
 const dirCache = {}
 
-function stripSuffix(str, suffix) {
-    if(str.endsWith(suffix))
-        return stripSuffix(str.slice(0, -suffix.length))
-    else
-        return str;
-}
-
-function stripPrefix(str, prefix) {
-    if(str.startsWith(prefix))
-        return stripPrefix(str.slice(prefix.length))
-    else
-        return str;
-}
-
-function stripSlashes(str) {
-    return stripSuffix(stripPrefix(str, "/"), "/")
-}
-
-function stripDir(f, parent) {
-    return stripSlashes(f.startsWith(parent) ? f.slice(parent.length) : f);
-}
-
-function appendSlash(dir) {
-    if(dir.endsWith("/")) return dir;
-    else return dir + "/";
-}
-
-/**
- * Make sure path has slash at the beginning and no slash at the end
- * @param path
- */
-function normalizePathSlashes(path) {
-    const p = path.startsWith("/") ? path : "/" + path
-    return stripSuffix(p, "/")
-}
-
-function splitPath(path) {
-    const d = normalizePathSlashes(path)
-    if(d == "/")
-        return ["/", null]
-    const lastSlash = path.lastIndexOf("/")
-    if(lastSlash == 0)
-        return ["/", path.slice(1)] //first-level dir
-    else
-        return [path.slice(0, lastSlash), path.slice(lastSlash + 1)]
-}
 
 const dirListCache = {}
 
@@ -59,7 +15,7 @@ const GalleryService = {
         } else {
             console.debug("Retrieving directory content from S3", dir)
             const s3 = new AWS.S3();
-            const d = appConfig.galleryFolder + appendSlash(dir)
+            const d = appConfig.galleryFolder + U.appendSlash(dir)
             return new Promise(function (resolve, reject) {
                 s3.listObjects({
                     Bucket: appConfig.galleryBucket,
@@ -71,8 +27,8 @@ const GalleryService = {
                         // console.log("result", res)
                         if (res.IsTruncated) console.warn("s3 response truncated, application doesn't handle it yet")
                         const ret = {
-                            folders: res.CommonPrefixes.map(p => stripDir(p.Prefix, d)).filter(f => f.length > 0).sort(),
-                            files: res.Contents.map(f => stripDir(f.Key, d)).filter(f => f.length > 0).sort()
+                            folders: res.CommonPrefixes.map(p => U.stripDir(p.Prefix, d)).filter(f => f.length > 0).sort(),
+                            files: res.Contents.map(f => U.stripDir(f.Key, d)).filter(f => f.length > 0).sort()
                         }
                         dirListCache[dir] = ret;
                         resolve(ret)
@@ -92,12 +48,12 @@ const GalleryService = {
     },
 
     distributionUrl: function(dir, file) {
-        return stripSuffix(appConfig.contentBaseUrl, "/") + appendSlash(dir) + file
+        return U.stripSuffix(appConfig.contentBaseUrl, "/") + U.appendSlash(dir) + file
     },
 
     thumbnailUrl: function(dir, file, w, h) {
         const query = "?w="+w+"&h="+h
-        return stripSuffix(appConfig.thumbnailBaseUrl, "/") + appendSlash(dir) + file + query
+        return U.stripSuffix(appConfig.thumbnailBaseUrl, "/") + U.appendSlash(dir) + file + query
     },
 
     lastChildDir: function(dir) {
@@ -111,7 +67,7 @@ const GalleryService = {
     },
 
     nextClosestSibling: function(dir) {
-        const pathElements = splitPath(dir)
+        const pathElements = Utils.splitPath(dir)
         if(!pathElements[1])
             return null //Root reached
         else
@@ -131,7 +87,7 @@ const GalleryService = {
     },
 
     previousDir: function(dir) {
-        const pathElements = splitPath(dir)
+        const pathElements = Utils.splitPath(dir)
         console.debug("Extracted parent", pathElements)
         if(!pathElements[1]) {
             console.debug("Root folder reached")

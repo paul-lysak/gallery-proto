@@ -1,6 +1,10 @@
 import UserService from "./user-service";
 import GalleryService from "./gallery-service";
+import U from "./utils";
+
 import Vue from "vue";
+import VueRouter from 'vue-router'
+Vue.use(VueRouter)
 
 import Toaster from 'v-toaster'
 import 'v-toaster/dist/v-toaster.css'
@@ -9,12 +13,8 @@ Vue.use(Toaster, {timeout: 5000})
 
 import "bootstrap/dist/css/bootstrap.css"
 
-// import jQuery from "jquery"
 window.jQuery = require("jquery")
 const bootstrap = require("bootstrap/dist/js/bootstrap")
-// import "bootstrap/dist/js/bootstrap"
-
-// import appConfig from "./config";
 
 import SplitPane from 'vue-split-pane'
 
@@ -108,19 +108,8 @@ Vue.component("user-details-dialog", {
             }
         }
     },
-    mounted: function() {
-        console.log("dialog is mounted", this.$refs.modal)
-        //TODO show dialog on captureUserDetails instead
-        // jQuery(this.$refs.modal).modal("show")
-    },
-
     template: `
-
-
 <div>
-
-    <!--<button type="button" class="btn btn-primary" data-toggle="modal" data-target="#myModal">Modal</button>-->
-            
     <div v-if="cognitoUser" class="modal fade" tabindex="-1" role="dialog" ref="modal" data-backdrop="static" data-keyboard="false">
       <div class="modal-dialog" role="document">
         <div class="modal-content">
@@ -143,36 +132,7 @@ Vue.component("user-details-dialog", {
         </div>
       </div>
     </div>
-    </div>
-`
-
-
-   // template: `
-   //     <div class="container g-center-container">
-   //
-   //    <div class="panel panel-default">
-   //        <div class="panel-heading">
-   //          <h3 class="panel-title">Sign In - Gallery</h3>
-   //        </div>
-   //        <div class="panel-body">
-   //          <form>
-   //            <div class="form-group">
-   //              <input type="text" class="form-control" placeholder="Username">
-   //              <input type="password" class="form-control" placeholder="Password">
-   //           </div>
-   //           <button type="submit" class="btn btn-default">Sign In</button>
-   //        </div>
-   //    </div>
-   //
-   //    <div class="panel">
-   //        <div class="panel-body">
-   //        {{ message }}
-   //        </div>
-   //    </div>
-   //
-   //  </div>
-   // `
-
+    </div>`
 })
 
 
@@ -184,11 +144,12 @@ function pathLastElement(path) {
         return elements.pop()
 }
 
+
 Vue.component("gallery-tree", {
-    props: ["folder", "defaultExpand"],
+    props: ["folder", "defaultExpand", "selectedFolder"],
     data: function() {
         return {
-            expanded: !!this.defaultExpand,
+            expanded: this.conditionalSelected(this.folder) || !!this.defaultExpand,
             subfolders: undefined
         };
     },
@@ -215,6 +176,12 @@ Vue.component("gallery-tree", {
         },
         forwardSelect: function (folder) {
             this.$emit("folderSelected", folder)
+        },
+        conditionalSelected: function(folder) {
+            if(this.selectedFolder && this.selectedFolder.startsWith(folder))
+                return this.selectedFolder
+            else
+                return null
         }
     },
     created: function () {
@@ -222,14 +189,14 @@ Vue.component("gallery-tree", {
     },
     template: `
     <div>
-      <div >
+      <div class="tree-item-head" v-bind:class="{selected: conditionalSelected(this.folder)}">
         <span @click="toggle" v-if="expanded" class="icon expand-icon glyphicon glyphicon-minus"></span> 
         <span @click="toggle" v-if="!expanded" class="icon expand-icon glyphicon glyphicon-plus"></span>
         <span @click="select" class="tree-item-caption">{{caption}}</span>
       </div>
       <ul v-show="expanded">
         <li v-for="sf in subfolders" class="tree-item">
-            <gallery-tree :folder="sf" v-on:folderSelected="forwardSelect"></gallery-tree>
+            <gallery-tree :folder="sf" v-on:folderSelected="forwardSelect" :selectedFolder="conditionalSelected(sf)"></gallery-tree>
         </li>
       </ul>
     </div>
@@ -254,7 +221,6 @@ Vue.component("gallery-folder", {
         refreshFiles: function() {
             const that = this;
             this.files = undefined;
-            // setTimeout(function() {that.files = [that.folder+"/TODO1", that.folder+"/TODO2"]}, 1000)
             GalleryService.list(this.folder).then(function(folderContent) {
                 that.files = folderContent.files;
             })
@@ -291,8 +257,6 @@ Vue.component("gallery-folder", {
             </div>
         </div>
     </div>`
-
-    // <div v-for="f in files" @click="downloadFile(f)" class="gallery-thumbnail">{{f}}</div>
 })
 
 Vue.component("image-viewer", {
@@ -378,16 +342,17 @@ Vue.component("image-viewer", {
 
 })
 
-Vue.component("gallery-content", {
-    data: function() {
-        return {
-            selectedFolder: "/"
+
+const GalleryContent = Vue.component("gallery-content", {
+  computed: {
+        selectedFolder: function() {
+            return this.$route.params.folder;
         }
     },
   methods: {
       folderSelected: function(folder) {
-          console.log("folder selected", folder)
-          this.selectedFolder = folder;
+          console.debug("folder selected", folder, this.$route.params)
+          router.push({name: "folders", params: {folder: folder}})
       },
       fileSelected: function(file) {
           this.$refs.image_viewer.showFile(this.selectedFolder, file)
@@ -398,7 +363,7 @@ Vue.component("gallery-content", {
         <image-viewer ref="image_viewer"/>
         <split-pane v-show="true">
           <section slot="left">
-            <gallery-tree :folder="'/'" :defaultExpand="true" v-on:folderSelected="folderSelected"></gallery-tree>
+            <gallery-tree :folder="'/'" :defaultExpand="true" :selectedFolder="selectedFolder" v-on:folderSelected="folderSelected"></gallery-tree>
           </section>
           <section slot="right">
             <gallery-folder :folder="selectedFolder"  v-on:fileSelected="fileSelected"></gallery-folder>
@@ -407,9 +372,20 @@ Vue.component("gallery-content", {
       </div>`
 })
 
+const router = new VueRouter({
+    routes: [
+        {path: "/folders/:folder", name: "folders", component: GalleryContent},
+        {path: "/folders", redirect: "/folders/%2F"},
+        {path: "/", redirect: "/folders/%2F"}
+    ]
+})
 
+const AuthenticatedContent = Vue.component('authenticated-content', {
+  router: router,
+  template: `<router-view></router-view>`
+})
 
-Vue.component('splash', {
+const Splash = Vue.component('splash', {
   template: `<div class="jumbotron">
         <h1>No public content</h1>
         <p>Sign in to view the gallery content</p>
@@ -433,8 +409,7 @@ var app = new Vue({
           if(!!this.$data.user.id) this.authenticated()
       },
       authenticated: function() {
-          this.$data.bodyComponent = "gallery-content"
-          // awsDemo()
+          this.$data.bodyComponent = "authenticated-content"
       },
       captureUserDetails(event) {
           console.log("TODO capture user details", event)
@@ -447,6 +422,7 @@ var app = new Vue({
           this.user = UserService.anonymousUser;
       }
   },
+  // router: router,
   template: `
     <div class="container">
       <nav class="navbar navbar-default">
@@ -464,12 +440,10 @@ var app = new Vue({
         </div>
       </nav>
 
+      <component v-bind:is="bodyComponent"></component>
 
-    <component v-bind:is="bodyComponent"></component>
-
-    <user-details-dialog ref="userDetailsDialog"/>
-    </div>
-    `
+      <user-details-dialog ref="userDetailsDialog"/>
+    </div>`
 }).$mount("#app")
 
 

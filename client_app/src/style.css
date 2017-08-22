@@ -38,6 +38,10 @@
     text-decoration: underline;
 }
 
+.tree-item-head.selected {
+    font-weight: bold;
+}
+
 .split-pane-gutter {
     /*background: yellow;*/
     /*border: 5px solid green;*/
