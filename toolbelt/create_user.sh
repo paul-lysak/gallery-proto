@@ -1,4 +1,5 @@
 #!/bin/sh
+#TODO
 
 AWS_PROFILE=
 USER_POOL_ID=some_pool

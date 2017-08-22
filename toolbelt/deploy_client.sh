@@ -6,9 +6,10 @@ set -e
 AWS_PROFILE=
 APP_LOCATION_S3=s3://some_bucket_name
 
-. ./config.sh
+MY_PATH="`dirname \"$0\"`"
+. $MY_PATH/config.sh
 
-cd client_app
+cd $MY_PATH/../client_app
 echo Building the app ...
 npm run build
 echo Deploying to $APP_LOCATION_S3 ...
