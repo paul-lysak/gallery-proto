@@ -39,9 +39,8 @@ class ResizerLambda extends RequestHandler[AwsProxyRequest, AwsProxyResponse] {
     (wOpt, hOpt, filePathOpt) match {
       case (None, None, _) => fail(s"Neither $WIDTH_PARAM, nor $HEIGHT_PARAM query parameter not specified")
       case (_, _, None) => fail(s"$FILE_PATH_PARAM path or query parameter not specified")
-      case (wO, hO, Some(filePath)) =>
+      case (wO, hO, Some(filePath)) if extensionIs(filePath, "jpg", "jpeg") =>
         log.debug(s"Bucket: ${params.galleryBucket}, folder: ${params.galleryFolder}")
-
         try {
           val res = new AwsProxyResponse(200,
             Map("Content-Type" -> "image/jpeg").asJava,
@@ -53,6 +52,23 @@ class ResizerLambda extends RequestHandler[AwsProxyRequest, AwsProxyResponse] {
           case e: AmazonServiceException if e.getErrorCode == "NoSuchKey" =>
             fail("File not found: "+filePath, 404)
         }
+      case (wO, hO, Some(filePath)) if extensionIs(filePath, "avi", "mov", "mp4", "gp3") =>
+        placeholderIcon("Video", wO, hO)
+      case (wO, hO, Some(filePath)) if extensionIs(filePath, "png") =>
+        placeholderIcon("PNG", wO, hO)
+      case (wO, hO, Some(filePath)) =>
+        placeholderIcon("?", wO, hO)
+    }
+  }
+
+  private def extensionIs(fileName: String, exts: String*): Boolean = {
+    val f = fileName.toLowerCase
+    val lastPoint = f.lastIndexOf(".")
+    if(lastPoint < 0 || lastPoint == f.length - 1) {
+      false
+    } else {
+      val ext = f.substring(lastPoint + 1)
+      exts.contains(ext)
     }
   }
 
@@ -183,33 +199,55 @@ class ResizerLambda extends RequestHandler[AwsProxyRequest, AwsProxyResponse] {
         log.debug(s"No metadata directory in $fileName, assuming default orientation $EXIF_ORIENTATION_NORM")
         EXIF_ORIENTATION_NORM
     }
-
   }
 
-  private def samplePicture(): Array[Byte] = {
-    val img = new BufferedImage(100, 100, BufferedImage.TYPE_3BYTE_BGR)
-    val g2d = img.createGraphics();
-    g2d.setRenderingHint(RenderingHints.KEY_ALPHA_INTERPOLATION, RenderingHints.VALUE_ALPHA_INTERPOLATION_QUALITY);
-    g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-    g2d.setRenderingHint(RenderingHints.KEY_COLOR_RENDERING, RenderingHints.VALUE_COLOR_RENDER_QUALITY);
-    g2d.setRenderingHint(RenderingHints.KEY_DITHERING, RenderingHints.VALUE_DITHER_ENABLE);
-    g2d.setRenderingHint(RenderingHints.KEY_FRACTIONALMETRICS, RenderingHints.VALUE_FRACTIONALMETRICS_ON);
-    g2d.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
-    g2d.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
-    g2d.setRenderingHint(RenderingHints.KEY_STROKE_CONTROL, RenderingHints.VALUE_STROKE_PURE);
 
-    val font = new Font("Arial", Font.PLAIN, 10);
-    g2d.setFont(font);
-    val fm = g2d.getFontMetrics();
-    g2d.setColor(Color.green);
-    g2d.drawString("Hi, there", 0, fm.getAscent());
+  private def fitText(text: String, maxW: Option[Int], maxH: Option[Int]): Array[Byte] = {
+    val probeFontSize = 120
+    val (srcW, srcH) = {
+      val probeFont = new Font("Arial", Font.PLAIN, probeFontSize);
+      val probeImg = new BufferedImage(1, 1, BufferedImage.TYPE_3BYTE_BGR)
+      val g = probeImg.createGraphics();
+      g.setFont(probeFont);
+      val fm = g.getFontMetrics();
+      g.dispose()
+      (fm.stringWidth(text), fm.getHeight)
+    }
+
+    val (dstW, dstH) = calculateDstDimensions(srcW, srcH, maxW, maxH)
+    val scale = {
+      val scaleX = dstW.toDouble / srcW.toDouble
+      val scaleY = dstH.toDouble / srcH.toDouble
+      if(scaleX < scaleY) scaleX else scaleY
+    }
+
+    val scaledFontSize: Int = (probeFontSize*scale).toInt
+    val img = new BufferedImage(dstW, dstH, BufferedImage.TYPE_3BYTE_BGR)
+    val g = img.createGraphics()
+    g.setColor(Color.WHITE)
+    g.fillRect(0,0, dstW, dstH)
+    g.setFont(new Font("Arial", Font.PLAIN, scaledFontSize))
+    val fm = g.getFontMetrics
+    g.setColor(Color.BLACK);
+    g.drawString(text, 0, fm.getAscent());
+
+    g.dispose()
 
     val baos = new ByteArrayOutputStream()
     ImageIO.write(img, "jpg", baos)
-    g2d.dispose()
 
-//    Base64.getEncoder.encodeToString(baos.toByteArray)
+    Base64.getEncoder.encodeToString(baos.toByteArray)
     baos.toByteArray
+  }
+
+  private def placeholderIcon(text: String, maxW: Option[Int], maxH: Option[Int]): AwsProxyResponse = {
+    val imgBytes = fitText(text, maxW, maxH)
+    val res = new AwsProxyResponse(200,
+      Map("Content-Type" -> "image/jpeg").asJava,
+      Base64.getEncoder.encodeToString(imgBytes)
+    )
+    res.setBase64Encoded(true)
+    res
   }
 
   private def fail(msg: String, httpCode: Int = 400): AwsProxyResponse = {
@@ -260,5 +298,4 @@ class RequestExtractor(req: java.util.Map[String, AnyRef]) {
   lazy val queryParams = params.get("querystring").fold(Map.empty[String, String])(_.asInstanceOf[java.util.Map[String, String]].asScala.toMap)
 
   lazy val pathParams = params.get("path").fold(Map.empty[String, String])(_.asInstanceOf[java.util.Map[String, String]].asScala.toMap)
-
 }
