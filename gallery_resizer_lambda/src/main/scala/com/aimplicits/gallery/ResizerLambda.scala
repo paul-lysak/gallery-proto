@@ -7,9 +7,10 @@ import java.io.{ByteArrayInputStream, ByteArrayOutputStream}
 import java.util.Base64
 import javax.imageio.ImageIO
 
+import com.amazonaws.AmazonServiceException
 import com.amazonaws.serverless.proxy.internal.model.{AwsProxyRequest, AwsProxyResponse}
 import com.amazonaws.services.lambda.runtime.{Context, RequestHandler}
-import com.amazonaws.services.s3.{AmazonS3ClientBuilder}
+import com.amazonaws.services.s3.AmazonS3ClientBuilder
 import com.drew.imaging.ImageMetadataReader
 import com.drew.metadata.exif.{ExifDirectoryBase, ExifIFD0Directory}
 import org.apache.commons.io.IOUtils
@@ -36,16 +37,22 @@ class ResizerLambda extends RequestHandler[AwsProxyRequest, AwsProxyResponse] {
     val hOpt = queryParams.get(HEIGHT_PARAM).flatMap(toIntOpt("h"))
 
     (wOpt, hOpt, filePathOpt) match {
-      case (None, None, _) => validationFailed(s"Neither $WIDTH_PARAM, nor $HEIGHT_PARAM query parameter not specified")
-      case (_, _, None) => validationFailed(s"$FILE_PATH_PARAM path or query parameter not specified")
+      case (None, None, _) => fail(s"Neither $WIDTH_PARAM, nor $HEIGHT_PARAM query parameter not specified")
+      case (_, _, None) => fail(s"$FILE_PATH_PARAM path or query parameter not specified")
       case (wO, hO, Some(filePath)) =>
         log.debug(s"Bucket: ${params.galleryBucket}, folder: ${params.galleryFolder}")
-        val res = new AwsProxyResponse(200,
-          Map("Content-Type" -> "image/jpeg").asJava,
-          getScaled(filePath, wO, hO)
-        )
-        res.setBase64Encoded(true)
-        res
+
+        try {
+          val res = new AwsProxyResponse(200,
+            Map("Content-Type" -> "image/jpeg").asJava,
+            getScaled(filePath, wO, hO)
+          )
+          res.setBase64Encoded(true)
+          res
+        } catch {
+          case e: AmazonServiceException if e.getErrorCode == "NoSuchKey" =>
+            fail("File not found: "+filePath, 404)
+        }
     }
   }
 
@@ -205,8 +212,8 @@ class ResizerLambda extends RequestHandler[AwsProxyRequest, AwsProxyResponse] {
     baos.toByteArray
   }
 
-  private def validationFailed(msg: String): AwsProxyResponse = {
-      new AwsProxyResponse(400,
+  private def fail(msg: String, httpCode: Int = 400): AwsProxyResponse = {
+      new AwsProxyResponse(httpCode,
         Map("Content-Type" -> "application/json").asJava,
       s"""
         |{"message": "$msg"}
