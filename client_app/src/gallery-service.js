@@ -61,13 +61,13 @@ const GalleryService = {
             if(content.folders.length == 0) {
                 return dir
             } else {
-                return GalleryService.lastChildDir(appendSlash(dir) + content.folders[content.folders.length - 1])
+                return GalleryService.lastChildDir(U.appendSlash(dir) + content.folders[content.folders.length - 1])
             }
         })
     },
 
     nextClosestSibling: function(dir) {
-        const pathElements = Utils.splitPath(dir)
+        const pathElements = U.splitPath(dir)
         if(!pathElements[1])
             return null //Root reached
         else
@@ -81,13 +81,13 @@ const GalleryService = {
                     console.debug("Last dir reached, navigating to parent's closest sibling", pathElements[0])
                     return GalleryService.nextClosestSibling(pathElements[0])
                 } else {
-                    return stripSuffix(pathElements[0], "/") + "/" + parentContent.folders[currentIndex + 1]
+                    return U.stripSuffix(pathElements[0], "/") + "/" + parentContent.folders[currentIndex + 1]
                 }
             })
     },
 
     previousDir: function(dir) {
-        const pathElements = Utils.splitPath(dir)
+        const pathElements = U.splitPath(dir)
         console.debug("Extracted parent", pathElements)
         if(!pathElements[1]) {
             console.debug("Root folder reached")
@@ -103,7 +103,7 @@ const GalleryService = {
                     console.debug("First dir reached, navigating to parent dir", pathElements[0])
                     return Promise.resolve(pathElements[0])
                 } else {
-                    const prev = appendSlash(pathElements[0]) + parentContent.folders[currentIndex - 1]
+                    const prev = U.appendSlash(pathElements[0]) + parentContent.folders[currentIndex - 1]
                     return GalleryService.lastChildDir(prev)
                 }
             })
@@ -115,7 +115,7 @@ const GalleryService = {
             if(content.folders.length == 0) {
                 return GalleryService.nextClosestSibling(dir)
             } else {
-                return appendSlash(dir) + content.folders[content.folders.length - 1]
+                return U.appendSlash(dir) + content.folders[content.folders.length - 1]
             }
         })
     },
@@ -123,15 +123,15 @@ const GalleryService = {
     previousDirWithFiles: function(dir) {
         return GalleryService.previousDir(dir).then(function(prevDir) {
             if(!prevDir) {
-                console.log("No prev dir", dir)
+                console.debug("No prev dir", dir)
                 return null
             } else {
                 return GalleryService.list(prevDir).then(function (prevDirContent) {
                     if (prevDirContent.files.length == 0) {
-                        console.log("0-len prev dir", dir, prevDir)
-                        return GalleryService.previousDir(prevDir)
+                        console.debug("0-len prev dir", dir, prevDir)
+                        return GalleryService.previousDirWithFiles(prevDir)
                     } else {
-                        console.log("NZ-len prev dir", dir, prevDir)
+                        console.debug("NZ-len prev dir", dir, prevDir)
                         return prevDir;
                     }
                 })
@@ -159,7 +159,6 @@ const GalleryService = {
                 console.warn("Current file not found in current folder, can't navigate", file, folderContent.files)
                 return Promise.resolve(null)
             } else if(currentIndex == 0) {
-                console.debug("First file in the directory, no backward navigation ATM")
                 return GalleryService.previousDirWithFiles(dir).then(function (prevDir) {
                     console.debug("Previous dir found", dir, prevDir)
                     if(!prevDir)
@@ -182,7 +181,6 @@ const GalleryService = {
                 console.warn("Current file not found in current folder, can't navigate", file, folderContent.files)
                 return Promise.resolve(null)
             } else if(currentIndex + 1 > folderContent.files.length - 1) {
-                console.debug("Last file in the directory, no forward navigation ATM")
                 return GalleryService.nextDirWithFiles(dir).then(function(nextDir) {
                     if(!nextDir)
                         return null
