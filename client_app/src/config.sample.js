@@ -8,7 +8,6 @@ export default {
     galleryFolder: "path/to/album",
 
     contentBaseUrl: "https://YOUR_DISTRIBUTION.cloudfront.net/album_prefix",
-    contentCookiesEndpoint: "https://YOUR_DISTRIBUTION.cloudfront.net/gallery/cookies",
-
-    linkExpirationTimeout: 300 /*seconds*/
+    thumbnailBaseUrl: "https://YOUR_DISTRIBUTION.cloudfront.net/gallery/resized",
+    contentCookiesEndpoint: "https://YOUR_DISTRIBUTION.cloudfront.net/gallery/cookies"
 }

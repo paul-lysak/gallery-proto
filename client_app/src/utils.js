@@ -68,6 +68,14 @@ const U = {
             return [path.slice(1), null]
         else
             return [path.slice(1, secondSlash), path.slice(secondSlash + 1)]
+    },
+
+    pathLastElement: function(path) {
+        const elements = path.split("/").filter(el => el.length > 0)
+        if (elements.length == 0)
+            return path;
+        else
+            return elements.pop()
     }
 }
 
