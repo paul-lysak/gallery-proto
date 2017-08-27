@@ -5,11 +5,12 @@ import {Config, CognitoIdentityCredentials} from "aws-sdk";
  AuthenticationDetails,
   // CognitoUserAttribute
  } from "amazon-cognito-identity-js";
-import appConfig from "./config";
+import GalleryConfig from "./config";
+// import appConfig from "./config";
 
 const userPool = new CognitoUserPool({
-  UserPoolId: appConfig.UserPoolId,
-  ClientId: appConfig.ClientId,
+  UserPoolId: GalleryConfig.UserPoolId,
+  ClientId: GalleryConfig.ClientId
 });
 
 const anonymousUser = {
@@ -22,14 +23,14 @@ const anonymousUser = {
 function setUpAWS(user) {
     const logins = {}
     const token = user.getSignInUserSession().getIdToken().getJwtToken()
-    const loginKey = "cognito-idp." + appConfig.region + ".amazonaws.com/" + appConfig.UserPoolId
+    const loginKey = "cognito-idp." + GalleryConfig.region + ".amazonaws.com/" + GalleryConfig.UserPoolId
     logins[loginKey] = token
     const creds = new AWS.CognitoIdentityCredentials({
-        IdentityPoolId: appConfig.IdentityPoolId,
+        IdentityPoolId: GalleryConfig.IdentityPoolId,
         Logins : logins
     });
 
-    AWS.config.region = appConfig.region;
+    AWS.config.region = GalleryConfig.region;
     AWS.config.credentials = creds
 
     const res = new Promise(function(resolve, reject) {
@@ -46,9 +47,9 @@ function setUpAWS(user) {
 }
 
 function setUpContentCookies(idToken) {
-    console.debug("requesting cookies with token ", idToken, appConfig.contentCookiesEndpoint)
+    console.debug("requesting cookies with token ", idToken, GalleryConfig.contentCookiesEndpoint)
     const req = new XMLHttpRequest()
-    req.open("GET", appConfig.contentCookiesEndpoint, true)
+    req.open("GET", GalleryConfig.contentCookiesEndpoint, true)
     req.setRequestHeader("Authorization", idToken)
     req.withCredentials = true
 

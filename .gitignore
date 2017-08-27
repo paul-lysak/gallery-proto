@@ -3,6 +3,7 @@
 .idea
 *.iml
 config.sh
+config.js
 node_modules
 client_app/dist
 local_notes.md

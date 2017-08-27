@@ -17,13 +17,10 @@ const HtmlWebpackPlugin = require('html-webpack-plugin');
 const CleanWebpackPlugin = require('clean-webpack-plugin');
 
 module.exports = {
-    // Example setup for your project:
-    // The entry module that requires or imports the rest of your project.
-    // Must start with `./`!
-    // resolve: {
-    //   extensions: ['.js']
-    // },
-    entry: './src/gallery-app.js',
+    entry: {
+        app: "./src/gallery-app.js",
+        config: "./src/config.js"
+    },
     devtool: 'inline-source-map',
     plugins: [
         new CleanWebpackPlugin(['dist']),
@@ -31,20 +28,15 @@ module.exports = {
            title: 'Gallery Prototype',
            inject: false,
            template: require("html-webpack-template"),
-           appMountId: "app"
+           appMountId: "app",
+           scripts: ["config.js"]
          })
-        // , new webpack.ProvidePlugin({
-        //     jQuery: 'jquery',
-        //     "window.jQuery": 'jquery',
-        //     $: 'jquery',
-        //     jquery: 'jquery'
-        // })
    ],
-    // Place output files in `./dist/my-app.js`
+    // Place output files in `./dist/app.js`
     output: {
-        path: __dirname + '/dist',
-        filename: 'app.js'
-    },
+            path: __dirname + '/dist',
+            filename: '[name].js'
+        },
     module: {
         loaders: [
             {

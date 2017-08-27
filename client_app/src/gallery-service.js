@@ -1,4 +1,4 @@
-import appConfig from "./config";
+// import appConfig from "./config";
 
 import U from "./utils";
 
@@ -15,10 +15,10 @@ const GalleryService = {
         } else {
             console.debug("Retrieving directory content from S3", dir)
             const s3 = new AWS.S3();
-            const d = appConfig.galleryFolder + U.appendSlash(dir)
+            const d = GalleryConfig.galleryFolder + U.appendSlash(dir)
             return new Promise(function (resolve, reject) {
                 s3.listObjects({
-                    Bucket: appConfig.galleryBucket,
+                    Bucket: GalleryConfig.galleryBucket,
                     Prefix: d,
                     Delimiter: "/"
                 }, function (err, res) {
@@ -41,19 +41,19 @@ const GalleryService = {
     //deprecated - use distributionUrl and cookies instead
     preSign: function(dir, file) {
         const s3 = new AWS.S3();
-        const key = appConfig.galleryFolder + appendSlash(dir) + file;
-        const url = s3.getSignedUrl("getObject", {Bucket: appConfig.galleryBucket, Key: key, Expires: appConfig.linkExpirationTimeout});
+        const key = GalleryConfig.galleryFolder + appendSlash(dir) + file;
+        const url = s3.getSignedUrl("getObject", {Bucket: GalleryConfig.galleryBucket, Key: key, Expires: GalleryConfig.linkExpirationTimeout});
         console.log("presigned url", dir, file, url);
         return url;
     },
 
     distributionUrl: function(dir, file) {
-        return U.stripSuffix(appConfig.contentBaseUrl, "/") + U.appendSlash(dir) + file
+        return U.stripSuffix(GalleryConfig.contentBaseUrl, "/") + U.appendSlash(dir) + file
     },
 
     thumbnailUrl: function(dir, file, w, h) {
         const query = "?w="+w+"&h="+h
-        return U.stripSuffix(appConfig.thumbnailBaseUrl, "/") + U.appendSlash(dir) + file + query
+        return U.stripSuffix(GalleryConfig.thumbnailBaseUrl, "/") + U.appendSlash(dir) + file + query
     },
 
     lastChildDir: function(dir) {
