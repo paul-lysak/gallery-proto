@@ -1,4 +1,6 @@
-export default {
+//Copy it to config.js and specify actual values
+
+window.GalleryConfig = {
     region: '',
     IdentityPoolId: '',
     UserPoolId: '',

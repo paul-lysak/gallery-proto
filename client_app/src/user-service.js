@@ -5,7 +5,6 @@ import {Config, CognitoIdentityCredentials} from "aws-sdk";
  AuthenticationDetails,
   // CognitoUserAttribute
  } from "amazon-cognito-identity-js";
-import GalleryConfig from "./config";
 // import appConfig from "./config";
 
 const userPool = new CognitoUserPool({

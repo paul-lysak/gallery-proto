@@ -18,8 +18,8 @@ const CleanWebpackPlugin = require('clean-webpack-plugin');
 
 module.exports = {
     entry: {
-        app: "./src/gallery-app.js",
-        config: "./src/config.js"
+        app: "./src/gallery-app.js"
+        // config: "./src/config.js"
     },
     devtool: 'inline-source-map',
     plugins: [
@@ -29,7 +29,7 @@ module.exports = {
            inject: false,
            template: require("html-webpack-template"),
            appMountId: "app",
-           scripts: ["config.js"]
+           scripts: ["/config.js"]
          })
    ],
     // Place output files in `./dist/app.js`
