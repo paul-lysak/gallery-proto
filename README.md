@@ -7,7 +7,7 @@ UI is written with Vue.js, lambda functions - in Scala.
 ## TODO: documentation
 
 I didn't have a time yet to write a comprehensive documentation, if you're interested in running this gallery
-on your own AWS account - please rise an issue and I'll try to clarify the things for you.
+on your own AWS account - please raise an issue and I'll try to clarify the things for you.
 
 ## How to set up permissions
 
