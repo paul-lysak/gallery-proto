@@ -4,6 +4,7 @@ import java.awt.geom.AffineTransform
 import java.awt.{Color, Font, RenderingHints}
 import java.awt.image.{AffineTransformOp, BufferedImage}
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream}
+import java.net.URLDecoder
 import java.util.Base64
 import javax.imageio.ImageIO
 
@@ -32,7 +33,9 @@ class ResizerLambda extends RequestHandler[AwsProxyRequest, AwsProxyResponse] {
     log.debug(s"Path params=${pathParams}, query params=${queryParams}")
 
 
-    val filePathOpt: Option[String] = pathParams.get(FILE_PATH_PARAM).orElse(queryParams.get(FILE_PATH_PARAM))
+    val filePathOpt: Option[String] = pathParams.get(FILE_PATH_PARAM)
+      .orElse(queryParams.get(FILE_PATH_PARAM))
+      .map(URLDecoder.decode(_, "UTF-8"))
     val wOpt = queryParams.get(WIDTH_PARAM).flatMap(toIntOpt("w"))
     val hOpt = queryParams.get(HEIGHT_PARAM).flatMap(toIntOpt("h"))
 
@@ -191,12 +194,12 @@ class ResizerLambda extends RequestHandler[AwsProxyRequest, AwsProxyResponse] {
   private def getOrientation(fileName: String, src: Array[Byte]): Int = {
     val md = ImageMetadataReader.readMetadata(new ByteArrayInputStream(src))
     Option(md.getFirstDirectoryOfType(classOf[ExifIFD0Directory])) match {
-      case Some(imDir) =>
+      case Some(imDir) if(imDir.containsTag(ExifDirectoryBase.TAG_ORIENTATION)) =>
         val o = imDir.getInt(ExifDirectoryBase.TAG_ORIENTATION)
         log.debug(s"Orientation of $fileName: $o")
         o
-      case None =>
-        log.debug(s"No metadata directory in $fileName, assuming default orientation $EXIF_ORIENTATION_NORM")
+      case _ =>
+        log.debug(s"No orientation metadata directory in $fileName, assuming default orientation $EXIF_ORIENTATION_NORM")
         EXIF_ORIENTATION_NORM
     }
   }
