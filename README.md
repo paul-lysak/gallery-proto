@@ -1,5 +1,13 @@
 # gallery-proto
 
+It's a prototype of a gallery which displays a tree of private folder on S3 and pictures in selected folder. 
+Uses Cognito for user management, Lambda for resizing the pictures, CloudFront for caching and restricting access to content. 
+UI is written with Vue.js, lambda functions - in Scala.
+
+## TODO: documentation
+
+I didn't have a time yet to write a comprehensive documentation, if you're interested in running this gallery
+on your own AWS account - please rise an issue and I'll try to clarify the things for you.
 
 ## How to set up permissions
 
