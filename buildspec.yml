@@ -13,7 +13,7 @@ phases:
   build:
     commands:
       - cd gallery_resizer_lambda
-      - echo bucket: $artifacts_bucket , prefix: $artifacts_prefix
+      - echo bucket - $artifacts_bucket , prefix - $artifacts_prefix
 #      - pwd
 #      - ls
       - sbt assembly
