@@ -22,6 +22,7 @@ phases:
                                    --output-template-file target/resizerLambdaSAMProcessed.yaml
       - cat target/resizerLambdaSAMProcessed.yaml
 artifacts:
+  type: zip
   files:
     - target/resizerLambdaSAMProcessed.yaml
-  discard-path: yes
+#  discard-path: yes
