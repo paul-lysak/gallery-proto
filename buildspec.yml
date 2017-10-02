@@ -25,4 +25,4 @@ artifacts:
   type: zip
   files:
     - gallery_resizer_lambda/target/resizerLambdaSAMProcessed.yaml
-#  discard-path: yes
+  discard-path: yes
