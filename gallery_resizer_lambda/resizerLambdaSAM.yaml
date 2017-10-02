@@ -1,4 +1,8 @@
-﻿AWSTemplateFormatVersion: '2010-09-09'
+﻿#
+# Warning: this template isn't fully  functioning, it's just for experiemting with CloudFormation
+# You'll need to tune it manually if you'd like to use it.
+#
+AWSTemplateFormatVersion: '2010-09-09'
 Transform: 'AWS::Serverless-2016-10-31'
 Description: Gallery lambda 2 for resizing the pictures
 Resources:
