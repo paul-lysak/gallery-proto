@@ -1,10 +1,16 @@
 #
-# Don't forget to set buildspec, artifacts_bucket and artifacts_prefix environment variables in CodeBuild
+# Don't forget to set artifacts_bucket and artifacts_prefix environment variables in CodeBuild
+#
+# Unfortunately, changing buildspec location from default one (root folder) isn't straightforward at the moment,
+# it's only possible through CLI together with all other settings for source code.
+# (http://docs.aws.amazon.com/codebuild/latest/userguide/build-spec-ref.html)
+# So, let's assume location and name of the file as hardcoded for no2
 #
 version: 0.1
 phases:
   install:
     commands:
+      - cd gallery_resizer_lambda
       - pwd
       - ls
       - sbt assembly
