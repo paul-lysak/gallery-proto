@@ -1,0 +1,17 @@
+#
+# Don't forget to set buildspec, artifacts_bucket and artifacts_prefix environment variables in CodeBuild
+#
+version: 0.1
+phases:
+  install:
+    commands:
+      - pwd
+      - ls
+      - sbt assembly
+      - aws cloudformation package --template-file resizerLambdaSAM.yaml --s3-bucket $artifacts_bucket
+                                   --s3-prefix $artifacts_prefix
+                                   --output-template-file target/resizerLambdaSAMProcessed.yaml
+      - cat target/resizerLambdaSAMProcessed.yaml
+artifacts:
+  files:
+    - target/resizerLambdaSAMProcessed.yaml
