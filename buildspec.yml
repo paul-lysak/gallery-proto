@@ -1,4 +1,6 @@
 #
+# Requires Docker image with both AWS CLI and Sbt. This one works well: https://hub.docker.com/r/toolsplus/scala-sbt-aws/
+#
 # Don't forget to set artifacts_bucket and artifacts_prefix environment variables in CodeBuild
 #
 # Unfortunately, changing buildspec location from default one (root folder) isn't straightforward at the moment,
@@ -11,8 +13,9 @@ phases:
   build:
     commands:
       - cd gallery_resizer_lambda
-      - pwd
-      - ls
+      - echo bucket: $artifacts_bucket , prefix: $artifacts_prefix
+#      - pwd
+#      - ls
       - sbt assembly
       - aws cloudformation package --template-file resizerLambdaSAM.yaml --s3-bucket $artifacts_bucket
                                    --s3-prefix $artifacts_prefix
