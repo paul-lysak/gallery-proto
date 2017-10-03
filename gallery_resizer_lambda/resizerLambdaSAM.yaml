@@ -5,6 +5,11 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: 'AWS::Serverless-2016-10-31'
 Description: Gallery lambda 2 for resizing the pictures
+Parameters:
+  galleryFolder:
+    Type: String
+  galleryBucket:
+    Type: String
 Resources:
   galleryResizeLambda2:
     Type: 'AWS::Serverless::Function'
@@ -24,7 +29,7 @@ Resources:
             Method: GET
       Environment:
         Variables:
-          galleryFolder: sampleFolder
-          galleryBucket: sampleBucket
+          galleryFolder: !Ref galleryFolder
+          galleryBucket: !Ref galleryBucket
       Tags:
         gallery: 'automated'
